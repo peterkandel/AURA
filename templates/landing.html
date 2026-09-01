@@ -1,0 +1,92 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="eyebrow">AURA LABS / EST. 2024</div>
+    <h1 class="hero-logo" data-text="AURA">AURA</h1>
+    <p class="hero-tagline">Radiate <strong>Intelligence</strong> // Build Different</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('auth_page') }}" class="btn-primary">Enter the Field</a>
+    </div>
+  </div>
+</section>
+
+<div class="ticker">
+  <div class="ticker-track">
+    <span>AURA.LABS</span><span>RADIATE INTELLIGENCE</span><span>AI / ROBOTICS / RESEARCH</span><span>EST. 2024</span><span>BUILD DIFFERENT</span>
+    <span>AURA.LABS</span><span>RADIATE INTELLIGENCE</span><span>AI / ROBOTICS / RESEARCH</span><span>EST. 2024</span><span>BUILD DIFFERENT</span>
+  </div>
+</div>
+
+<section id="about" class="section-shell">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">/ 01 — MANIFESTO</span>
+      <h2 class="section-title">We engineer<br>the <em>aura</em> of tomorrow.</h2>
+    </div>
+    <div class="about-grid">
+      <p class="about-copy">AURA Labs is a collective of <strong>builders, researchers, and visionaries</strong> obsessed with the architecture of intelligence. We don't chase trends — we emit signals. Every project, every line of code, every system is a deliberate act of <strong>radiation</strong>: pushing the frontier outward, pulling the impossible inward.</p>
+      <div class="meta-stack">
+        <div class="meta-block"><span>FOUNDED</span><strong>2024 / SECTOR_04</strong></div>
+        <div class="meta-block"><span>DOCTRINE</span><strong>Build. Radiate. Recurse.</strong></div>
+        <div class="meta-block"><span>ACCESS</span><strong>Invitation only</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pillars" class="section-shell">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">/ 02 — DISCIPLINES</span>
+      <h2 class="section-title">Four pillars.<br>One <em>signal</em>.</h2>
+    </div>
+    <div class="pillars-grid">
+      <article class="pillar-card"><div class="pillar-index">/ 01</div><h3>AI / ML</h3><p>Train models that don't just predict — they radiate intent.</p><div class="chip-list"><span>LLM</span><span>Vision</span><span>RLHF</span></div></article>
+      <article class="pillar-card"><div class="pillar-index">/ 02</div><h3>Robotics</h3><p>Build embodied systems that move through physical space.</p><div class="chip-list"><span>Control</span><span>Vision</span><span>SLAM</span></div></article>
+      <article class="pillar-card"><div class="pillar-index">/ 03</div><h3>Research</h3><p>Prototype the unknown and turn theory into artifact.</p><div class="chip-list"><span>Papers</span><span>Protos</span><span>Open</span></div></article>
+      <article class="pillar-card"><div class="pillar-index">/ 04</div><h3>Community</h3><p>Gather the sharpest minds and amplify the field together.</p><div class="chip-list"><span>Events</span><span>Salons</span><span>Open Source</span></div></article>
+    </div>
+  </div>
+</section>
+
+<section id="projects" class="section-shell">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">/ 03 — FIELD WORK</span>
+      <h2 class="section-title">Signals <em>shipped</em>.<br>Not promised.</h2>
+    </div>
+    <div class="project-grid">
+      <article class="project-card"><div class="project-image image-one"></div><div class="project-overlay"></div><div class="project-info"><span>AI / 2024</span><h3>NEURAL FORGE</h3></div></article>
+      <article class="project-card"><div class="project-image image-two"></div><div class="project-overlay"></div><div class="project-info"><span>Voice / 2024</span><h3>ECHO PROTOCOL</h3></div></article>
+      <article class="project-card"><div class="project-image image-three"></div><div class="project-overlay"></div><div class="project-info"><span>Vision / 2024</span><h3>PRISM CORE</h3></div></article>
+    </div>
+  </div>
+</section>
+
+<section id="team" class="section-shell">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">/ 04 — OPERATORS</span>
+      <h2 class="section-title">The <em>signal</em><br>has a source.</h2>
+    </div>
+    <div class="team-grid">
+      <article class="team-card"><div class="team-image image-a"></div><div class="team-overlay"></div><div class="team-info"><span>/ OP_001</span><h3>KAI VEXLER</h3><p>Founder // Architect</p></div></article>
+      <article class="team-card"><div class="team-image image-b"></div><div class="team-overlay"></div><div class="team-info"><span>/ OP_002</span><h3>NOVA RHEA</h3><p>AI Research Lead</p></div></article>
+      <article class="team-card"><div class="team-image image-c"></div><div class="team-overlay"></div><div class="team-info"><span>/ OP_003</span><h3>JIN AXEL</h3><p>Robotics Lead</p></div></article>
+    </div>
+  </div>
+</section>
+
+<section id="join" class="join-box">
+  <div class="join-glow"></div>
+  <div class="join-content">
+    <div class="eyebrow">/ 05 — ACCESS PROTOCOL</div>
+    <h2>JOIN<br>THE <em>FIELD</em></h2>
+    <p>Membership is invitation-only. We accept signals from builders, researchers, and operators who radiate at the right frequency. If that's you — emit.</p>
+    <a href="{{ url_for('auth_page', mode='signup') }}" class="btn-primary">Transmit Signal</a>
+  </div>
+</section>
+{% endblock %}

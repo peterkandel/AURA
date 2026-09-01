@@ -1,0 +1,263 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-panel auth-panel--visual">
+      <div class="auth-badge">AURA / ACCESS</div>
+      <h1>Radiate with the field.</h1>
+      <p>Join the builders, researchers, and operators shaping what intelligence looks like next.</p>
+      <ul>
+        <li>Secure member onboarding</li>
+        <li>Profile-driven collaboration</li>
+        <li>Research and open-source pathways</li>
+      </ul>
+    </div>
+
+    <div class="auth-panel auth-panel--form">
+      <div class="auth-tabs" role="tablist" aria-label="Authentication modes">
+        <a href="{{ url_for('auth_page', mode='signup') }}" class="auth-tab {% if mode == 'signup' %}active{% endif %}" data-mode="signup">Sign Up</a>
+        <a href="{{ url_for('auth_page', mode='login') }}" class="auth-tab {% if mode == 'login' %}active{% endif %}" data-mode="login">Login</a>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="flash flash--{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('auth_page', mode=mode) }}" class="auth-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="mode" value="{{ mode }}" id="auth-mode">
+
+        {% if mode == 'signup' %}
+          <div class="field-grid">
+            <label class="field">
+              <span>Full Name</span>
+              <input type="text" name="full_name" value="{{ form_data.full_name if form_data else '' }}" required data-validate="full_name">
+              <small class="field-error" data-error-for="full_name"></small>
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input type="email" name="email" value="{{ form_data.email if form_data else '' }}" required data-validate="email">
+              <small class="field-error" data-error-for="email"></small>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Country</span>
+              <input type="text" name="country" value="{{ form_data.country if form_data else '' }}" required data-validate="country">
+              <small class="field-error" data-error-for="country"></small>
+            </label>
+            <label class="field">
+              <span>GitHub Profile Link</span>
+              <input type="url" name="github_profile" value="{{ form_data.github_profile if form_data else '' }}" placeholder="https://github.com/your-name" required data-validate="github_profile">
+              <small class="field-error" data-error-for="github_profile"></small>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Role</span>
+              <select name="role" required data-validate="role">
+                <option value="">Select one</option>
+                <option value="Student" {% if form_data and form_data.role == 'Student' %}selected{% endif %}>Student</option>
+                <option value="Researcher" {% if form_data and form_data.role == 'Researcher' %}selected{% endif %}>Researcher</option>
+                <option value="Developer" {% if form_data and form_data.role == 'Developer' %}selected{% endif %}>Developer</option>
+                <option value="Other" {% if form_data and form_data.role == 'Other' %}selected{% endif %}>Other</option>
+              </select>
+              <small class="field-error" data-error-for="role"></small>
+            </label>
+            <label class="field">
+              <span>Discord Username</span>
+              <input type="text" name="discord_username" value="{{ form_data.discord_username if form_data else '' }}" placeholder="handle" required data-validate="discord_username">
+              <small class="field-error" data-error-for="discord_username"></small>
+            </label>
+          </div>
+
+          <div class="field">
+            <span>Which areas interest you most? (choose up to 2)</span>
+            <div class="chip-group" data-field="interests">
+              {% for interest in ['AI/ML','Robotics','Research','Open-source','Leadership'] %}
+                <label class="chip">
+                  <input type="checkbox" name="interests" value="{{ interest }}" {% if form_data and interest in form_data.interests %}checked{% endif %}>
+                  <span>{{ interest }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <small class="field-error" data-error-for="interests"></small>
+          </div>
+
+          <label class="field">
+            <span>Relevant experience or project</span>
+            <textarea name="experience" rows="3" required data-validate="experience">{{ form_data.experience if form_data else '' }}</textarea>
+            <small class="field-error" data-error-for="experience"></small>
+          </label>
+
+          <label class="field">
+            <span>What do you want to contribute or get out of AURA?</span>
+            <textarea name="contribution" rows="3" required data-validate="contribution">{{ form_data.contribution if form_data else '' }}</textarea>
+            <small class="field-error" data-error-for="contribution"></small>
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Hours per week you can commit</span>
+              <input type="number" min="1" max="40" name="weekly_commitment" value="{{ form_data.weekly_commitment if form_data else '' }}" required data-validate="weekly_commitment">
+              <small class="field-error" data-error-for="weekly_commitment"></small>
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input type="password" name="password" required data-validate="password" aria-describedby="password-rules">
+              <small id="password-rules" class="field-help">8+ chars, uppercase, and number required.</small>
+              <small class="field-error" data-error-for="password"></small>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Confirm Password</span>
+            <input type="password" name="confirm_password" required data-validate="confirm_password">
+            <small class="field-error" data-error-for="confirm_password"></small>
+          </label>
+
+          <button class="btn-primary" type="submit">Create account</button>
+        {% else %}
+          <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" required data-validate="email">
+            <small class="field-error" data-error-for="email"></small>
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" required data-validate="password">
+            <small class="field-error" data-error-for="password"></small>
+          </label>
+          <button class="btn-primary" type="submit">Login</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</section>
+<script>
+  (function () {
+    const form = document.querySelector('.auth-form');
+    if (!form) return;
+
+    const currentMode = document.getElementById('auth-mode')?.value || 'signup';
+    const isSignup = currentMode === 'signup';
+
+    const rules = {
+      full_name: value => value.trim().length >= 2 ? '' : 'Full name is required.',
+      email: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ? '' : 'Please enter a valid email address.',
+      country: value => value.trim().length >= 2 ? '' : 'Country is required.',
+      github_profile: value => /^https?:\/\/github\.com\/[A-Za-z0-9_.-]+\/?$/.test(value.trim()) ? '' : 'Please enter a valid GitHub profile URL.',
+      role: value => ['Student', 'Researcher', 'Developer', 'Other'].includes(value) ? '' : 'Please select a role.',
+      interests: () => {
+        const checked = form.querySelectorAll('input[name="interests"]:checked');
+        return checked.length >= 1 && checked.length <= 2 ? '' : 'Select between 1 and 2 interest areas.';
+      },
+      experience: value => value.trim().length >= 10 ? '' : 'Please provide a concise project or experience summary.',
+      contribution: value => value.trim().length >= 10 ? '' : 'Please tell us what you want to contribute or gain from AURA.',
+      discord_username: value => /^[A-Za-z0-9_.-]{2,32}$/.test(value.trim()) ? '' : 'Discord username must use letters, numbers, underscores, periods, or dashes.',
+      weekly_commitment: value => { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 1 && parsed <= 40 ? '' : 'Weekly commitment must be a whole number between 1 and 40 hours.'; },
+      password: value => {
+        if (!isSignup) return value.length ? '' : 'Password is required.';
+        if (value.length < 8) return 'Password must be at least 8 characters.';
+        if (!/[A-Z]/.test(value)) return 'Password must include an uppercase letter.';
+        if (!/\d/.test(value)) return 'Password must include a number.';
+        return '';
+      },
+      confirm_password: value => {
+        if (!isSignup) return '';
+        const password = form.querySelector('input[name="password"]').value;
+        return value === password && value.length ? '' : 'Passwords must match.';
+      }
+    };
+
+    function setFieldState(input, message) {
+      const field = input.closest('.field');
+      const errorText = field?.querySelector('.field-error');
+      if (!field || !errorText) return;
+      if (message) {
+        field.classList.add('has-error');
+        input.setAttribute('aria-invalid', 'true');
+        errorText.textContent = message;
+      } else {
+        field.classList.remove('has-error');
+        input.setAttribute('aria-invalid', 'false');
+        errorText.textContent = '';
+      }
+    }
+
+    function validateInput(input) {
+      const key = input.dataset.validate;
+      if (!key || !rules[key]) return true;
+      const message = rules[key](input.value, input);
+      setFieldState(input, message);
+      return !message;
+    }
+
+    form.querySelectorAll('[data-validate]').forEach(input => {
+      input.addEventListener('blur', () => {
+        if (input.value || input.type === 'select-one') validateInput(input);
+      });
+      input.addEventListener('input', () => {
+        const fieldKey = input.dataset.validate;
+        if (input.value.length > 0 || fieldKey === 'confirm_password') validateInput(input);
+        if (fieldKey === 'password' || fieldKey === 'confirm_password') {
+          const confirm = form.querySelector('[data-validate="confirm_password"]');
+          if (confirm) validateInput(confirm);
+        }
+      });
+    });
+
+    form.querySelectorAll('input[name="interests"]').forEach(box => {
+      box.addEventListener('change', () => {
+        const interestsField = form.querySelector('[data-field="interests"]');
+        const errorText = form.querySelector('[data-error-for="interests"]');
+        const checked = form.querySelectorAll('input[name="interests"]:checked').length;
+        if (checked > 2) {
+          box.checked = false;
+          interestsField.classList.add('invalid');
+          errorText.textContent = 'You may select up to 2 interest areas.';
+          return;
+        }
+        interestsField.classList.remove('invalid');
+        errorText.textContent = '';
+      });
+    });
+
+    form.addEventListener('submit', (event) => {
+      let valid = true;
+      const inputs = [...form.querySelectorAll('[data-validate]')];
+      inputs.forEach(input => {
+        if (!validateInput(input)) valid = false;
+      });
+      const interestsError = form.querySelector('[data-error-for="interests"]');
+      const interestsField = form.querySelector('[data-field="interests"]');
+      const checked = form.querySelectorAll('input[name="interests"]:checked').length;
+      if (checked < 1 || checked > 2) {
+        valid = false;
+        interestsField.classList.add('invalid');
+        interestsError.textContent = 'Select between 1 and 2 interest areas.';
+      } else {
+        interestsField.classList.remove('invalid');
+        interestsError.textContent = '';
+      }
+      if (!valid) {
+        event.preventDefault();
+        return;
+      }
+
+      const submitButton = form.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.textContent = isSignup ? 'Creating account...' : 'Logging in...';
+    });
+  })();
+</script>
+{% endblock %}

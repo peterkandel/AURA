@@ -1,0 +1,112 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="dashboard-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">AURA / MEMBER PORTAL</p>
+      <h1>Dashboard</h1>
+    </div>
+    <div class="header-actions">
+      <a class="btn-secondary" href="{{ url_for('home') }}">Home</a>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-secondary danger" type="submit">Logout</button>
+      </form>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="dashboard-grid">
+    <aside class="profile-card">
+      <div class="profile-avatar">{{ user.full_name[:1] | upper }}</div>
+      <h2>{{ user.full_name }}</h2>
+      <p class="muted">{{ user.role }} • {{ user.country }}</p>
+      <dl>
+        <div><dt>Email</dt><dd>{{ user.email }}</dd></div>
+        <div><dt>GitHub</dt><dd><a href="{{ user.github_profile }}" target="_blank" rel="noopener">{{ user.github_profile }}</a></dd></div>
+        <div><dt>Discord</dt><dd>{{ user.discord_username }}</dd></div>
+        <div><dt>Commitment</dt><dd>{{ user.weekly_commitment }} hrs/week</dd></div>
+      </dl>
+    </aside>
+
+    <main class="editor-card">
+      <h3>Edit profile</h3>
+      <form method="post" class="auth-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field-grid">
+          <label class="field">
+            <span>Full Name</span>
+            <input type="text" name="full_name" value="{{ form_data.full_name if form_data else user.full_name }}" required>
+          </label>
+          <label class="field">
+            <span>Country</span>
+            <input type="text" name="country" value="{{ form_data.country if form_data else user.country }}" required>
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Github Profile</span>
+            <input type="url" name="github_profile" value="{{ form_data.github_profile if form_data else user.github_profile }}" required>
+          </label>
+          <label class="field">
+            <span>Role</span>
+            <select name="role" required>
+              <option value="Student" {% if (form_data.role if form_data else user.role) == 'Student' %}selected{% endif %}>Student</option>
+              <option value="Researcher" {% if (form_data.role if form_data else user.role) == 'Researcher' %}selected{% endif %}>Researcher</option>
+              <option value="Developer" {% if (form_data.role if form_data else user.role) == 'Developer' %}selected{% endif %}>Developer</option>
+              <option value="Other" {% if (form_data.role if form_data else user.role) == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Discord Username</span>
+            <input type="text" name="discord_username" value="{{ form_data.discord_username if form_data else user.discord_username }}" required>
+          </label>
+          <label class="field">
+            <span>Hours per week</span>
+            <input type="number" min="1" max="40" name="weekly_commitment" value="{{ form_data.weekly_commitment if form_data else user.weekly_commitment }}" required>
+          </label>
+        </div>
+
+        <div class="field">
+          <span>Which areas interest you most? (choose up to 2)</span>
+          <div class="chip-group">
+            {% set interests = form_data.interests if form_data else user.profile.interests %}
+            {% for interest in ['AI/ML','Robotics','Research','Open-source','Leadership'] %}
+              <label class="chip">
+                <input type="checkbox" name="interests" value="{{ interest }}" {% if interest in interests %}checked{% endif %}>
+                <span>{{ interest }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Relevant experience or project</span>
+          <textarea name="experience" rows="3" required>{{ form_data.experience if form_data else user.experience }}</textarea>
+        </label>
+
+        <label class="field">
+          <span>What do you want to contribute or get out of AURA?</span>
+          <textarea name="contribution" rows="3" required>{{ form_data.contribution if form_data else user.contribution }}</textarea>
+        </label>
+
+        <button class="btn-primary" type="submit">Save changes</button>
+      </form>
+    </main>
+  </div>
+</section>
+{% endblock %}
