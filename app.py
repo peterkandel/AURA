@@ -19,16 +19,19 @@ load_dotenv()
 app = Flask(__name__)
 app.config["APP_ENV"] = os.getenv("APP_ENV", "development").lower()
 app.config["DEBUG"] = app.config["APP_ENV"] == "development" and os.getenv("FLASK_DEBUG", "0") == "1"
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "")
+
+DEFAULT_DEV_SECRET_KEY = "adhyayan-local-dev-secret-key-change-me"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or (DEFAULT_DEV_SECRET_KEY if app.config["APP_ENV"] != "production" else "")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///adhyayan.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true" if app.config["APP_ENV"] == "production" else "false").lower() == "true"
 app.config["PERMANENT_SESSION_LIFETIME"] = int(os.getenv("SESSION_LIFETIME_SECONDS", "3600"))
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 if app.config["APP_ENV"] == "production":
-    if not app.config["SECRET_KEY"] or app.config["SECRET_KEY"] in {"dev-secret-key-change-me", "replace-with-a-long-random-secret"}:
+    if not app.config["SECRET_KEY"] or app.config["SECRET_KEY"] == DEFAULT_DEV_SECRET_KEY:
         raise RuntimeError("A strong SECRET_KEY is required in production.")
     if not os.getenv("DATABASE_URL") or app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
         raise RuntimeError("A production DATABASE_URL must be configured.")
@@ -266,7 +269,7 @@ def auth_page(mode=None):
         if password != confirm_password:
             errors.append("Passwords do not match.")
         if User.query.filter_by(email=email).first():
-            errors.append("An account with that email already exists.")
+            errors.append("We could not create that account. Please review your details and try again.")
 
         if errors:
             for message in errors:
@@ -388,7 +391,7 @@ def ensure_database_ready():
 
 @app.after_request
 def add_security_headers(response):
-    response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://picsum.photos; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")

@@ -98,7 +98,8 @@ def test_duplicate_email_rejected(client):
         'confirm_password': 'AnotherPass123!'
     }, follow_redirects=True)
     assert response.status_code == 200
-    assert b'already exists' in response.data.lower()
+    assert b'could not create that account' in response.data.lower()
+    assert b'email' not in response.data.lower() or b'account with that email' not in response.data.lower()
 
 
 def test_invalid_login_and_signup_inputs_rejected(client):
