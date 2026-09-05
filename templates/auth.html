@@ -4,7 +4,7 @@
 <section class="auth-shell">
   <div class="auth-card">
     <div class="auth-panel auth-panel--visual">
-      <div class="auth-badge">AURA / ACCESS</div>
+      <div class="auth-badge">ADHYAYAN / ACCESS</div>
       <h1>Radiate with the field.</h1>
       <p>Join the builders, researchers, and operators shaping what intelligence looks like next.</p>
       <ul>
@@ -100,7 +100,7 @@
           </label>
 
           <label class="field">
-            <span>What do you want to contribute or get out of AURA?</span>
+            <span>What do you want to contribute or get out of Adhyayan?</span>
             <textarea name="contribution" rows="3" required data-validate="contribution">{{ form_data.contribution if form_data else '' }}</textarea>
             <small class="field-error" data-error-for="contribution"></small>
           </label>
@@ -162,7 +162,7 @@
         return checked.length >= 1 && checked.length <= 2 ? '' : 'Select between 1 and 2 interest areas.';
       },
       experience: value => value.trim().length >= 10 ? '' : 'Please provide a concise project or experience summary.',
-      contribution: value => value.trim().length >= 10 ? '' : 'Please tell us what you want to contribute or gain from AURA.',
+      contribution: value => value.trim().length >= 10 ? '' : 'Please tell us what you want to contribute or gain from Adhyayan.',
       discord_username: value => /^[A-Za-z0-9_.-]{2,32}$/.test(value.trim()) ? '' : 'Discord username must use letters, numbers, underscores, periods, or dashes.',
       weekly_commitment: value => { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 1 && parsed <= 40 ? '' : 'Weekly commitment must be a whole number between 1 and 40 hours.'; },
       password: value => {

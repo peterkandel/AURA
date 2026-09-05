@@ -23,7 +23,7 @@ def client():
 def test_homepage_loads(client):
     resp = client.get('/')
     assert resp.status_code == 200
-    assert b'AURA' in resp.data
+    assert b'Adhyayan' in resp.data
 
 
 def test_auth_routes_load_and_modes(client):
@@ -236,7 +236,7 @@ def test_password_requirements_and_mismatch_rejected(client):
         'role': 'Other',
         'interests': ['Research'],
         'experience': 'Largely theoretical work.',
-        'contribution': 'I want to support AURA research.',
+        'contribution': 'I want to support Adhyayan research.',
         'discord_username': 'mismatch_user',
         'weekly_commitment': '9',
         'password': 'StrongPass123!',
@@ -307,9 +307,9 @@ def test_signup_rate_limit_covers_repeated_attempts(client):
 
 
 def test_profile_payload_is_escaped_and_github_validation_rejects_malicious_urls(client):
-    assert is_valid_github_url('https://github.com/aura-user')
-    assert not is_valid_github_url('https://github.com.evil.example/aura-user')
-    assert not is_valid_github_url('https://github.com/aura-user?next=https://evil.example')
+    assert is_valid_github_url('https://github.com/adhyayan-user')
+    assert not is_valid_github_url('https://github.com.evil.example/adhyayan-user')
+    assert not is_valid_github_url('https://github.com/adhyayan-user?next=https://evil.example')
     payload = {
         'full_name': '<script>alert(1)</script>',
         'email': 'xss@example.com',
@@ -353,13 +353,13 @@ def test_server_error_page_is_generic(client):
         app.view_functions['home'] = original_home
         app.config['PROPAGATE_EXCEPTIONS'] = previous_propagation
     assert response.status_code == 500
-    assert b'AURA could not complete that request' in response.data
+    assert b'Adhyayan could not complete that request' in response.data
     assert b'internal test detail' not in response.data
 
 
 def test_production_requires_secret_and_disables_debug():
     environment = os.environ.copy()
-    environment.update({'APP_ENV': 'production', 'SECRET_KEY': '', 'DATABASE_URL': 'postgresql://user:pass@localhost/aura'})
+    environment.update({'APP_ENV': 'production', 'SECRET_KEY': '', 'DATABASE_URL': 'postgresql://user:pass@localhost/adhyayan'})
     result = subprocess.run([sys.executable, '-c', 'import app'], env=environment, capture_output=True, text=True)
     assert result.returncode != 0
     assert 'SECRET_KEY is required' in result.stderr

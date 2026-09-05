@@ -20,7 +20,7 @@ app = Flask(__name__)
 app.config["APP_ENV"] = os.getenv("APP_ENV", "development").lower()
 app.config["DEBUG"] = app.config["APP_ENV"] == "development" and os.getenv("FLASK_DEBUG", "0") == "1"
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///aura.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///adhyayan.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
@@ -39,7 +39,7 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth_page"
-login_manager.login_message = "Please sign in to access your AURA dashboard."
+login_manager.login_message = "Please sign in to access your Adhyayan dashboard."
 
 ALLOWED_ROLES = {"Student", "Researcher", "Developer", "Other"}
 ALLOWED_INTERESTS = {
@@ -220,7 +220,7 @@ def auth_page(mode=None):
                 return render_template("auth.html", mode="login", user=current_user)
             login_user(user)
             session.permanent = True
-            flash("Welcome back to AURA.", "success")
+            flash("Welcome back to Adhyayan.", "success")
             return redirect(url_for("dashboard"))
 
         full_name = request.form.get("full_name", "").strip()
@@ -256,7 +256,7 @@ def auth_page(mode=None):
         if not is_safe_text(experience, minimum=10, maximum=4000):
             errors.append("Please provide a brief relevant experience summary.")
         if not is_safe_text(contribution, minimum=10, maximum=4000):
-            errors.append("Please tell us what you want to contribute or gain from AURA.")
+            errors.append("Please tell us what you want to contribute or gain from Adhyayan.")
         if not is_valid_discord(discord_username):
             errors.append("Discord username must contain only letters, numbers, underscores, periods, or dashes.")
         if not validate_weekly_commitment(weekly_commitment):
@@ -301,7 +301,7 @@ def auth_page(mode=None):
         db.session.commit()
         login_user(user)
         session.permanent = True
-        flash("Account created successfully. Welcome to AURA.", "success")
+        flash("Account created successfully. Welcome to Adhyayan.", "success")
         return redirect(url_for("dashboard"))
 
     return render_template("auth.html", mode=mode, user=current_user)
@@ -336,7 +336,7 @@ def dashboard():
         if not is_safe_text(experience, minimum=10, maximum=4000):
             errors.append("Please provide a concise summary of relevant experience.")
         if not is_safe_text(contribution, minimum=10, maximum=4000):
-            errors.append("Please provide an AURA contribution or goal statement.")
+            errors.append("Please provide an Adhyayan contribution or goal statement.")
         if not is_valid_discord(discord_username):
             errors.append("Discord username must contain only letters, numbers, underscores, periods, or dashes.")
         if not validate_weekly_commitment(weekly_commitment):
@@ -420,7 +420,7 @@ def handle_method_not_allowed(error):
 def handle_server_error(error):
     db.session.rollback()
     app.logger.exception("Unhandled application error")
-    return render_template("error.html", code=500, message="AURA could not complete that request."), 500
+    return render_template("error.html", code=500, message="Adhyayan could not complete that request."), 500
 
 
 if __name__ == "__main__":

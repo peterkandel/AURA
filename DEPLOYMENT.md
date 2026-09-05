@@ -1,4 +1,4 @@
-# AURA deployment preparation
+# Adhyayan deployment preparation
 
 ## Local development
 
