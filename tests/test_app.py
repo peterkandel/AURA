@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from app import User, app, db, is_valid_github_url, rate_lock
+from app import User, app, db, is_valid_github_url, normalize_database_url, rate_lock
 
 
 @pytest.fixture
@@ -24,6 +24,72 @@ def test_homepage_loads(client):
     resp = client.get('/')
     assert resp.status_code == 200
     assert b'Adhyayan' in resp.data
+
+
+@pytest.mark.parametrize(
+    ('database_url', 'expected'),
+    [
+        ('postgresql://user:password@db.example.com/adhyayan', 'postgresql+psycopg://user:password@db.example.com/adhyayan'),
+        ('postgres://user:password@db.example.com/adhyayan', 'postgresql+psycopg://user:password@db.example.com/adhyayan'),
+        ('postgresql+psycopg://user:password@db.example.com/adhyayan', 'postgresql+psycopg://user:password@db.example.com/adhyayan'),
+        ('sqlite:///adhyayan.db', 'sqlite:///adhyayan.db'),
+        ('postgresql://user:password@db.example.com:5432/adhyayan', 'postgresql+psycopg://user:password@db.example.com:5432/adhyayan'),
+        ('postgresql://user:password@db.example.com/adhyayan?sslmode=require&application_name=adhyayan', 'postgresql+psycopg://user:password@db.example.com/adhyayan?application_name=adhyayan&sslmode=require'),
+        ('postgresql://encoded%40user:p%40ss%3Aword@db.example.com/adhyayan', 'postgresql+psycopg://encoded%40user:p%40ss%3Aword@db.example.com/adhyayan'),
+    ],
+)
+def test_normalize_database_url(database_url, expected):
+    assert normalize_database_url(database_url) == expected
+
+
+def test_normalize_database_url_preserves_missing_value():
+    assert normalize_database_url(None) is None
+
+
+@pytest.mark.parametrize(
+    'database_url',
+    [
+        'postgresql://user:password@db.example.com:5432/adhyayan?sslmode=require',
+        'postgres://user:password@db.example.com/adhyayan',
+        'postgresql+psycopg://user:password@db.example.com/adhyayan',
+        'sqlite:///adhyayan.db',
+    ],
+)
+def test_application_configuration_and_engine_use_expected_driver(database_url):
+    environment = os.environ.copy()
+    environment.update({
+        'APP_ENV': 'development',
+        'DATABASE_URL': database_url,
+    })
+    command = (
+        'from sqlalchemy.engine import make_url; from app import app, db; '
+        'app.app_context().push(); '
+        'config_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"]); '
+        'engine_url = db.engine.url; '
+        'print(config_url.drivername); '
+        'print(engine_url.drivername); '
+        'print(bool(engine_url.host), bool(engine_url.port), bool(engine_url.database))'
+    )
+    result = subprocess.run([sys.executable, '-c', command], env=environment, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.strip().splitlines()
+    expected_driver = 'sqlite' if database_url.startswith('sqlite:') else 'postgresql+psycopg'
+    assert lines[0] == expected_driver
+    assert lines[1] == expected_driver
+    if database_url.startswith('sqlite:'):
+        assert lines[2] == 'False False True'
+    else:
+        expected_port = ':5432' in database_url
+        assert lines[2] == f'True {expected_port} True'
+
+
+def test_production_rejects_missing_database_url():
+    environment = os.environ.copy()
+    environment.update({'APP_ENV': 'production', 'SECRET_KEY': 'test-production-secret'})
+    environment['DATABASE_URL'] = ''
+    result = subprocess.run([sys.executable, '-c', 'import app'], env=environment, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert 'A production DATABASE_URL must be configured.' in result.stderr
 
 
 def test_auth_routes_load_and_modes(client):

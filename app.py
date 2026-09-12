@@ -10,11 +10,24 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.engine import make_url
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def normalize_database_url(database_url: str | None) -> str | None:
+    if not database_url:
+        return database_url
+
+    parsed_url = make_url(database_url)
+    if parsed_url.drivername in {"postgres", "postgresql"}:
+        parsed_url = parsed_url.set(drivername="postgresql+psycopg")
+        return parsed_url.render_as_string(hide_password=False)
+    return database_url
+
 
 app = Flask(__name__)
 app.config["APP_ENV"] = os.getenv("APP_ENV", "development").lower()
@@ -22,7 +35,8 @@ app.config["DEBUG"] = app.config["APP_ENV"] == "development" and os.getenv("FLAS
 
 DEFAULT_DEV_SECRET_KEY = "adhyayan-local-dev-secret-key-change-me"
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or (DEFAULT_DEV_SECRET_KEY if app.config["APP_ENV"] != "production" else "")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///adhyayan.db")
+database_url = os.getenv("DATABASE_URL", "sqlite:///adhyayan.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = normalize_database_url(database_url)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
