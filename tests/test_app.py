@@ -23,7 +23,7 @@ def client():
 def test_homepage_loads(client):
     resp = client.get('/')
     assert resp.status_code == 200
-    assert b'Adhyayan' in resp.data
+    assert b'ADHAYAN' in resp.data
 
 
 @pytest.mark.parametrize(
@@ -303,7 +303,7 @@ def test_password_requirements_and_mismatch_rejected(client):
         'role': 'Other',
         'interests': ['Research'],
         'experience': 'Largely theoretical work.',
-        'contribution': 'I want to support Adhyayan research.',
+        'contribution': 'I want to support ADHAYAN research.',
         'discord_username': 'mismatch_user',
         'weekly_commitment': '9',
         'password': 'StrongPass123!',
@@ -420,7 +420,7 @@ def test_server_error_page_is_generic(client):
         app.view_functions['home'] = original_home
         app.config['PROPAGATE_EXCEPTIONS'] = previous_propagation
     assert response.status_code == 500
-    assert b'Adhyayan could not complete that request' in response.data
+    assert b'ADHAYAN could not complete that request' in response.data
     assert b'internal test detail' not in response.data
 
 
