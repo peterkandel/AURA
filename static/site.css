@@ -85,7 +85,7 @@ button, input, textarea, select {
 .btn-secondary.danger { border-color: rgba(255,99,132,0.5); }
 
 .hero {
-  position: relative; min-height: 82vh; display: grid; place-items: center; overflow: hidden; padding: 120px 24px 80px; z-index: 2;
+  position: relative; min-height: 82vh; display: grid; place-items: center; overflow: visible; padding: 120px 24px 80px; z-index: 2;
 }
 .hero-glow {
   position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 65vmin; height: 65vmin; background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%); filter: blur(60px); animation: adhyayanPulse 5s ease-in-out infinite;
@@ -95,14 +95,13 @@ button, input, textarea, select {
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
 }
 .hero-content {
-  position: relative; z-index: 1; text-align: center; max-width: 1200px; width: 100%;
+  position: relative; z-index: 1; text-align: center; width: 100%; max-width: 1200px; margin: 0 auto;
 }
 .eyebrow {
   font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.4em; color: var(--accent); margin-bottom: 24px; text-transform: uppercase;
 }
 .hero-logo {
-  font-family: var(--font-display); font-size: clamp(80px, 22vw, 280px); line-height: 0.9; letter-spacing: 0.02em; font-weight: 700; margin: 0; position: relative;
-  text-shadow: 0 0 60px rgba(34,211,238,0.4), 0 0 120px rgba(34,211,238,0.15);
+  font-family: var(--font-display); font-size: clamp(52px, 8vw, 170px); line-height: 0.9; letter-spacing: 0.02em; font-weight: 700; margin: 0 auto; position: relative; display: block; width: min(100%, 820px); max-width: 100%; text-align: center; white-space: nowrap; text-shadow: 0 0 60px rgba(34,211,238,0.4), 0 0 120px rgba(34,211,238,0.15); transform: none;
 }
 .hero-logo::before, .hero-logo::after { content: attr(data-text); position: absolute; inset: 0; }
 .hero-logo::before { color: var(--accent); opacity: 0.7; transform: translate(-2px,0); }
