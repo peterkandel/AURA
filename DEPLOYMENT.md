@@ -1,4 +1,4 @@
-# Adhyayan deployment preparation
+# ADHAYAN deployment preparation
 
 ## Local development
 
