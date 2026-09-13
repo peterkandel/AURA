@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -201,6 +202,46 @@ class User(db.Model):
         return json.dumps(list(values), separators=(",", ":"))
 
 
+class Opportunity(db.Model):
+    __tablename__ = "opportunities"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(80), nullable=False, default="General")
+    interests = db.Column(db.Text, nullable=False, default="[]")
+    difficulty = db.Column(db.String(32), nullable=False, default="Beginner")
+    estimated_hours_per_week = db.Column(db.Integer, nullable=False, default=4)
+    required_skills = db.Column(db.Text, nullable=False, default="[]")
+    status = db.Column(db.String(32), nullable=False, default="active", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    @staticmethod
+    def _parse_json_list(raw_value: str | None) -> list[str]:
+        if not raw_value:
+            return []
+        try:
+            parsed = json.loads(raw_value)
+        except (TypeError, ValueError):
+            return [part.strip() for part in str(raw_value).split(",") if part.strip()]
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+        return []
+
+    @property
+    def interests_list(self) -> list[str]:
+        return self._parse_json_list(self.interests)
+
+    @property
+    def required_skills_list(self) -> list[str]:
+        return self._parse_json_list(self.required_skills)
+
+    @staticmethod
+    def serialize_list(values: Iterable[str]) -> str:
+        return json.dumps(list(values), separators=(",", ":"))
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -372,7 +413,7 @@ def dashboard():
                 "contribution": contribution,
                 "discord_username": discord_username,
                 "weekly_commitment": weekly_commitment,
-            })
+            }, featured_opportunities=Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all())
 
         current_user.full_name = full_name
         current_user.country = country
@@ -386,7 +427,22 @@ def dashboard():
         db.session.commit()
         flash("Profile updated successfully.", "success")
 
-    return render_template("dashboard.html", user=current_user, form_data=current_user.profile)
+    featured_opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all()
+    return render_template("dashboard.html", user=current_user, form_data=current_user.profile, featured_opportunities=featured_opportunities)
+
+
+@app.route("/opportunities")
+@login_required
+def opportunities():
+    opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc(), Opportunity.id.desc()).all()
+    return render_template("opportunities.html", user=current_user, opportunities=opportunities)
+
+
+@app.route("/opportunities/<int:opportunity_id>")
+@login_required
+def opportunity_detail(opportunity_id):
+    opportunity = Opportunity.query.get_or_404(opportunity_id)
+    return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity)
 
 
 @app.route("/logout", methods=["POST"])

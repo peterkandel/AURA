@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from app import User, app, db, is_valid_github_url, normalize_database_url, rate_lock
+from app import Opportunity, User, app, db, is_valid_github_url, normalize_database_url, rate_lock
 
 
 @pytest.fixture
@@ -275,6 +275,89 @@ def test_user_isolation(client):
     dashboard_two = client.get('/dashboard')
     assert b'Bob Beta' in dashboard_two.data
     assert b'Alice Alpha' not in dashboard_two.data
+
+
+def test_opportunity_model_and_readonly_routes(client):
+    with app.app_context():
+        assert 'id' in Opportunity.__table__.columns.keys()
+        assert 'title' in Opportunity.__table__.columns.keys()
+        assert 'status' in Opportunity.__table__.columns.keys()
+
+    signup = client.post('/auth', data={
+        'full_name': 'Opportunity User',
+        'email': 'opp@example.com',
+        'country': 'USA',
+        'github_profile': 'https://github.com/oppuser',
+        'role': 'Developer',
+        'interests': ['AI/ML'],
+        'experience': 'Built a research tooling prototype.',
+        'contribution': 'I want to work across learning systems.',
+        'discord_username': 'opp_user',
+        'weekly_commitment': '10',
+        'password': 'StrongPass123!',
+        'confirm_password': 'StrongPass123!'
+    }, follow_redirects=True)
+    assert signup.status_code == 200
+
+    with app.app_context():
+        db.session.add_all([
+            Opportunity(
+                title='Open AI Lab',
+                description='Help explore machine learning experiments and prototype tools.',
+                category='Research',
+                interests='["AI/ML","Research"]',
+                difficulty='Intermediate',
+                estimated_hours_per_week=8,
+                required_skills='["Python","Data analysis"]',
+                status='active',
+            ),
+            Opportunity(
+                title='Closed Community Sprint',
+                description='This opportunity is now closed to new users.',
+                category='Community',
+                interests='["Leadership"]',
+                difficulty='Beginner',
+                estimated_hours_per_week=4,
+                required_skills='["Communication"]',
+                status='closed',
+            ),
+        ])
+        db.session.commit()
+
+    client.post('/logout', follow_redirects=True)
+    unauthenticated = client.get('/opportunities', follow_redirects=True)
+    assert unauthenticated.status_code == 200
+    assert b'Login' in unauthenticated.data or b'Sign Up' in unauthenticated.data
+
+    login = client.post('/auth', data={
+        'mode': 'login',
+        'email': 'opp@example.com',
+        'password': 'StrongPass123!'
+    }, follow_redirects=True)
+    assert login.status_code == 200
+
+    authenticated = client.get('/opportunities', follow_redirects=True)
+    assert authenticated.status_code == 200
+    assert b'Open AI Lab' in authenticated.data
+    assert b'Closed Community Sprint' not in authenticated.data
+
+    detail = client.get('/opportunities/1', follow_redirects=True)
+    assert detail.status_code == 200
+    assert b'Open AI Lab' in detail.data
+    assert b'RESEARCH' in detail.data or b'Research' in detail.data
+
+    closed_detail = client.get('/opportunities/2', follow_redirects=True)
+    assert closed_detail.status_code == 200
+    assert b'Closed' in closed_detail.data or b'closed' in closed_detail.data
+
+    missing = client.get('/opportunities/9999', follow_redirects=True)
+    assert missing.status_code == 404
+
+    dashboard = client.get('/dashboard', follow_redirects=True)
+    assert dashboard.status_code == 200
+    assert b'Discover Opportunities' in dashboard.data
+    html = dashboard.data.decode('utf-8')
+    assert '/opportunities' in html or 'Browse Opportunities' in html
 
 
 def test_password_requirements_and_mismatch_rejected(client):

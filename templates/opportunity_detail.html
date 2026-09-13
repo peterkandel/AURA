@@ -1,0 +1,61 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="opportunity-shell detail-shell">
+  <div class="section-header opportunity-header">
+    <div>
+      <p class="eyebrow">ADHAYAN / OPPORTUNITY</p>
+      <h1>{{ opportunity.title }}</h1>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('opportunities') }}">Back to opportunities</a>
+  </div>
+
+  <article class="opportunity-detail-card">
+    <div class="opportunity-detail-top">
+      <span class="opportunity-category">{{ opportunity.category }}</span>
+      {% if opportunity.status == 'closed' %}
+        <span class="opportunity-status status-closed">Closed</span>
+      {% else %}
+        <span class="opportunity-status status-active">Active</span>
+      {% endif %}
+    </div>
+
+    <div class="opportunity-detail-body">
+      <p class="opportunity-description">{{ opportunity.description }}</p>
+
+      <div class="opportunity-details-grid">
+        <div class="detail-item">
+          <span>Interests</span>
+          <strong>{{ ', '.join(opportunity.interests_list) if opportunity.interests_list else 'General' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Difficulty</span>
+          <strong>{{ opportunity.difficulty }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Estimated hours/week</span>
+          <strong>{{ opportunity.estimated_hours_per_week }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Required skills</span>
+          <strong>{{ ', '.join(opportunity.required_skills_list) if opportunity.required_skills_list else 'Not specified' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Status</span>
+          <strong>{{ opportunity.status|title }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Created</span>
+          <strong>{{ opportunity.created_at.strftime('%Y-%m-%d') if opportunity.created_at else '—' }}</strong>
+        </div>
+      </div>
+
+      {% if opportunity.status == 'closed' %}
+        <div class="alert-box alert-warning">
+          This opportunity is closed and no participation actions are available in this step.
+        </div>
+      {% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}

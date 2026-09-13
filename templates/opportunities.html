@@ -1,0 +1,40 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="opportunity-shell">
+  <div class="section-header opportunity-header">
+    <div>
+      <p class="eyebrow">ADHAYAN / OPPORTUNITIES</p>
+      <h1>Browse opportunities</h1>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+  </div>
+
+  {% if opportunities %}
+    <div class="opportunity-list">
+      {% for opportunity in opportunities %}
+        <article class="opportunity-card">
+          <div class="opportunity-card-top">
+            <span class="opportunity-category">{{ opportunity.category }}</span>
+            <span class="opportunity-status status-active">Active</span>
+          </div>
+          <h2>{{ opportunity.title }}</h2>
+          <p class="opportunity-summary">{{ opportunity.description[:180] }}{% if opportunity.description|length > 180 %}...{% endif %}</p>
+          <div class="opportunity-meta">
+            <span><strong>Interests:</strong> {{ ', '.join(opportunity.interests_list) if opportunity.interests_list else 'General' }}</span>
+            <span><strong>Difficulty:</strong> {{ opportunity.difficulty }}</span>
+            <span><strong>Hours/week:</strong> {{ opportunity.estimated_hours_per_week }}</span>
+          </div>
+          <div class="opportunity-card-actions">
+            <a class="btn-primary" href="{{ url_for('opportunity_detail', opportunity_id=opportunity.id) }}">View details</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state wide">
+      <p>No active opportunities are currently available. New ADHAYAN collaborations will appear here as they are published.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
