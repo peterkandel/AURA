@@ -26,6 +26,7 @@
         <a href="{{ url_for('home') }}#team">Crew</a>
         {% if user and user.is_authenticated %}
           <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('opportunities') }}">Opportunities</a>
           <form class="inline-form" method="post" action="{{ url_for('logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="link-button">Logout</button>
@@ -41,6 +42,16 @@
       {% endif %}
     </div>
   </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
   {% block content %}{% endblock %}
 

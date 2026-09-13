@@ -10,6 +10,16 @@
     <a class="btn-secondary" href="{{ url_for('opportunities') }}">Back to opportunities</a>
   </div>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
   <article class="opportunity-detail-card">
     <div class="opportunity-detail-top">
       <span class="opportunity-category">{{ opportunity.category }}</span>
@@ -53,6 +63,21 @@
       {% if opportunity.status == 'closed' %}
         <div class="alert-box alert-warning">
           This opportunity is closed and no participation actions are available in this step.
+        </div>
+      {% else %}
+        <div class="interest-action-row">
+          {% if interest and interest.status == 'interested' %}
+            <div class="interest-status-banner">You're interested</div>
+            <form method="post" action="{{ url_for('withdraw_interest', opportunity_id=opportunity.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-secondary danger" type="submit">Withdraw Interest</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('express_interest', opportunity_id=opportunity.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-primary" type="submit">Express Interest</button>
+            </form>
+          {% endif %}
         </div>
       {% endif %}
     </div>

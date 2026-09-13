@@ -10,13 +10,27 @@
     <a class="btn-secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
   </div>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
   {% if opportunities %}
     <div class="opportunity-list">
       {% for opportunity in opportunities %}
         <article class="opportunity-card">
           <div class="opportunity-card-top">
             <span class="opportunity-category">{{ opportunity.category }}</span>
-            <span class="opportunity-status status-active">Active</span>
+            {% if interest_map and interest_map.get(opportunity.id) and interest_map[opportunity.id].status == 'interested' %}
+              <span class="opportunity-status status-active">Interested</span>
+            {% else %}
+              <span class="opportunity-status status-active">Active</span>
+            {% endif %}
           </div>
           <h2>{{ opportunity.title }}</h2>
           <p class="opportunity-summary">{{ opportunity.description[:180] }}{% if opportunity.description|length > 180 %}...{% endif %}</p>

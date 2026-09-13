@@ -141,5 +141,38 @@
       </div>
     {% endif %}
   </section>
+
+  <section class="discovery-panel my-opportunities-panel">
+    <div class="discovery-header">
+      <div>
+        <p class="eyebrow">ADHAYAN / MY OPPORTUNITIES</p>
+        <h3>My Opportunities</h3>
+      </div>
+      <a class="btn-secondary" href="{{ url_for('opportunities') }}">Browse Opportunities</a>
+    </div>
+
+    {% if my_opportunities %}
+      <div class="my-opportunities-list">
+        {% for opportunity in my_opportunities %}
+          <article class="opportunity-mini-card my-opportunity-item">
+            <div class="mini-meta">
+              <span>{{ opportunity.category }}</span>
+              <span>{{ opportunity.difficulty }}</span>
+            </div>
+            <h4>{{ opportunity.title }}</h4>
+            <div class="mini-footer">
+              <span>{{ opportunity.estimated_hours_per_week }} hrs/week</span>
+              <span>Interested</span>
+            </div>
+            <a class="btn-secondary" href="{{ url_for('opportunity_detail', opportunity_id=opportunity.id) }}">View</a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>You haven't expressed interest in an opportunity yet.</p>
+      </div>
+    {% endif %}
+  </section>
 </section>
 {% endblock %}

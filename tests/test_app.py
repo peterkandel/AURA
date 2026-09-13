@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from app import Opportunity, User, app, db, is_valid_github_url, normalize_database_url, rate_lock
+from app import Opportunity, OpportunityInterest, User, app, db, is_valid_github_url, normalize_database_url, rate_lock
 
 
 @pytest.fixture
@@ -358,6 +358,148 @@ def test_opportunity_model_and_readonly_routes(client):
     assert b'Discover Opportunities' in dashboard.data
     html = dashboard.data.decode('utf-8')
     assert '/opportunities' in html or 'Browse Opportunities' in html
+
+
+def test_opportunity_interest_flow_and_dashboard_state(client):
+    signup = client.post('/auth', data={
+        'full_name': 'Interest User',
+        'email': 'interest@example.com',
+        'country': 'USA',
+        'github_profile': 'https://github.com/interestuser',
+        'role': 'Developer',
+        'interests': ['AI/ML'],
+        'experience': 'Built several internal tools.',
+        'contribution': 'I want to contribute to experimental learning programs.',
+        'discord_username': 'interest_user',
+        'weekly_commitment': '8',
+        'password': 'StrongPass123!',
+        'confirm_password': 'StrongPass123!'
+    }, follow_redirects=True)
+    assert signup.status_code == 200
+
+    with app.app_context():
+        db.session.add_all([
+            Opportunity(
+                title='AI Research Lab',
+                description='Explore research prototyping and model iteration.',
+                category='Research',
+                interests='["AI/ML","Research"]',
+                difficulty='Intermediate',
+                estimated_hours_per_week=10,
+                required_skills='["Python","Research"]',
+                status='active',
+            ),
+            Opportunity(
+                title='Closed Sprint',
+                description='This sprint has ended for now.',
+                category='Community',
+                interests='["Leadership"]',
+                difficulty='Beginner',
+                estimated_hours_per_week=4,
+                required_skills='["Communication"]',
+                status='closed',
+            ),
+        ])
+        db.session.commit()
+
+    logout = client.post('/logout', follow_redirects=True)
+    assert logout.status_code == 200
+
+    unauthenticated_interest = client.post('/opportunities/1/interest', follow_redirects=True)
+    assert unauthenticated_interest.status_code == 200
+    assert b'Login' in unauthenticated_interest.data or b'Sign Up' in unauthenticated_interest.data
+
+    login = client.post('/auth', data={
+        'mode': 'login',
+        'email': 'interest@example.com',
+        'password': 'StrongPass123!'
+    }, follow_redirects=True)
+    assert login.status_code == 200
+
+    detail_before = client.get('/opportunities/1', follow_redirects=True)
+    assert detail_before.status_code == 200
+    assert b'Express Interest' in detail_before.data
+
+    interest = client.post('/opportunities/1/interest', follow_redirects=True)
+    assert interest.status_code == 200
+    assert b'Your interest has been recorded' in interest.data or b'interest' in interest.data.lower()
+
+    with app.app_context():
+        stored = OpportunityInterest.query.filter_by(user_id=1, opportunity_id=1).first()
+        assert stored is not None
+        assert stored.status == 'interested'
+
+    detail_after = client.get('/opportunities/1', follow_redirects=True)
+    assert detail_after.status_code == 200
+    assert b'You\'re interested' in detail_after.data or b'Withdraw Interest' in detail_after.data
+
+    duplicate = client.post('/opportunities/1/interest', follow_redirects=True)
+    assert duplicate.status_code == 200
+    assert b'already expressed interest' in duplicate.data.lower()
+
+    closed_reject = client.post('/opportunities/2/interest', follow_redirects=True)
+    assert closed_reject.status_code == 200
+    assert b'closed' in closed_reject.data.lower()
+
+    missing = client.post('/opportunities/999/interest', follow_redirects=True)
+    assert missing.status_code == 404
+
+    dashboard = client.get('/dashboard', follow_redirects=True)
+    assert dashboard.status_code == 200
+    assert b'My Opportunities' in dashboard.data
+    assert b'AI Research Lab' in dashboard.data
+
+    withdraw = client.post('/opportunities/1/interest/withdraw', follow_redirects=True)
+    assert withdraw.status_code == 200
+    assert b'withdrawn' in withdraw.data.lower()
+
+    with app.app_context():
+        stored = OpportunityInterest.query.filter_by(user_id=1, opportunity_id=1).first()
+        assert stored is not None
+        assert stored.status == 'withdrawn'
+
+    empty_dashboard = client.get('/dashboard', follow_redirects=True)
+    assert empty_dashboard.status_code == 200
+    assert b'You haven\'t expressed interest in an opportunity yet.' in empty_dashboard.data or b'You haven\'t expressed interest' in empty_dashboard.data
+
+    client.post('/logout', follow_redirects=True)
+    second_user = client.post('/auth', data={
+        'full_name': 'Second User',
+        'email': 'second@example.com',
+        'country': 'Canada',
+        'github_profile': 'https://github.com/seconduser',
+        'role': 'Researcher',
+        'interests': ['Research'],
+        'experience': 'Worked on cross-functional research initiatives.',
+        'contribution': 'I want to apply research workflows to community projects.',
+        'discord_username': 'second_user',
+        'weekly_commitment': '12',
+        'password': 'StrongPass123!',
+        'confirm_password': 'StrongPass123!'
+    }, follow_redirects=True)
+    assert second_user.status_code == 200
+
+    other_user_interest = client.post('/opportunities/1/interest', follow_redirects=True)
+    assert other_user_interest.status_code == 200
+    assert b'Your interest has been recorded' in other_user_interest.data or b'interest' in other_user_interest.data.lower()
+
+    client.post('/logout', follow_redirects=True)
+    client.post('/auth', data={'mode': 'login', 'email': 'interest@example.com', 'password': 'StrongPass123!'}, follow_redirects=True)
+    unauthorized_withdraw = client.post('/opportunities/1/interest/withdraw', follow_redirects=True)
+    assert unauthorized_withdraw.status_code == 200
+    assert b'You do not have an active interest' in unauthorized_withdraw.data or b'active interest' in unauthorized_withdraw.data.lower()
+
+    client.post('/logout', follow_redirects=True)
+    client.post('/auth', data={'mode': 'login', 'email': 'second@example.com', 'password': 'StrongPass123!'}, follow_redirects=True)
+    own_withdraw = client.post('/opportunities/1/interest/withdraw', follow_redirects=True)
+    assert own_withdraw.status_code == 200
+    assert b'withdrawn' in own_withdraw.data.lower()
+
+    client.post('/logout', follow_redirects=True)
+    client.post('/auth', data={'mode': 'login', 'email': 'interest@example.com', 'password': 'StrongPass123!'}, follow_redirects=True)
+    detail_while_withdrawn = client.get('/opportunities/1', follow_redirects=True)
+    assert detail_while_withdrawn.status_code == 200
+    assert b'Express Interest' in detail_while_withdrawn.data
 
 
 def test_password_requirements_and_mismatch_rejected(client):

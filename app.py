@@ -12,6 +12,7 @@ from flask_login import LoginManager, current_user, login_required, login_user, 
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from dotenv import load_dotenv
@@ -143,6 +144,7 @@ class User(db.Model):
     weekly_commitment = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    opportunity_interests = db.relationship("OpportunityInterest", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def is_active(self):
@@ -202,6 +204,23 @@ class User(db.Model):
         return json.dumps(list(values), separators=(",", ":"))
 
 
+class OpportunityInterest(db.Model):
+    __tablename__ = "opportunity_interests"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "opportunity_id", name="uq_opportunity_interest_user_opportunity"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    opportunity_id = db.Column(db.Integer, db.ForeignKey("opportunities.id"), nullable=False, index=True)
+    status = db.Column(db.String(32), nullable=False, default="interested", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", back_populates="opportunity_interests")
+    opportunity = db.relationship("Opportunity", back_populates="interested_users")
+
+
 class Opportunity(db.Model):
     __tablename__ = "opportunities"
 
@@ -216,6 +235,7 @@ class Opportunity(db.Model):
     status = db.Column(db.String(32), nullable=False, default="active", index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    interested_users = db.relationship("OpportunityInterest", back_populates="opportunity", cascade="all, delete-orphan")
 
     @staticmethod
     def _parse_json_list(raw_value: str | None) -> list[str]:
@@ -245,6 +265,12 @@ class Opportunity(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+def get_user_interest_for_opportunity(user_id: int | None, opportunity_id: int) -> OpportunityInterest | None:
+    if not user_id:
+        return None
+    return OpportunityInterest.query.filter_by(user_id=user_id, opportunity_id=opportunity_id).first()
 
 
 @app.route("/")
@@ -400,6 +426,11 @@ def dashboard():
         if not validate_weekly_commitment(weekly_commitment):
             errors.append("Weekly commitment must be a whole number between 1 and 40 hours.")
 
+        my_opportunities = Opportunity.query.join(OpportunityInterest).filter(
+            OpportunityInterest.user_id == current_user.id,
+            OpportunityInterest.status == "interested",
+        ).order_by(OpportunityInterest.updated_at.desc()).all()
+
         if errors:
             for message in errors:
                 flash(message, "error")
@@ -413,7 +444,7 @@ def dashboard():
                 "contribution": contribution,
                 "discord_username": discord_username,
                 "weekly_commitment": weekly_commitment,
-            }, featured_opportunities=Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all())
+            }, featured_opportunities=Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all(), my_opportunities=my_opportunities)
 
         current_user.full_name = full_name
         current_user.country = country
@@ -428,21 +459,74 @@ def dashboard():
         flash("Profile updated successfully.", "success")
 
     featured_opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all()
-    return render_template("dashboard.html", user=current_user, form_data=current_user.profile, featured_opportunities=featured_opportunities)
+    my_opportunities = Opportunity.query.join(OpportunityInterest).filter(
+        OpportunityInterest.user_id == current_user.id,
+        OpportunityInterest.status == "interested",
+    ).order_by(OpportunityInterest.updated_at.desc()).all()
+    return render_template("dashboard.html", user=current_user, form_data=current_user.profile, featured_opportunities=featured_opportunities, my_opportunities=my_opportunities)
 
 
 @app.route("/opportunities")
 @login_required
 def opportunities():
     opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc(), Opportunity.id.desc()).all()
-    return render_template("opportunities.html", user=current_user, opportunities=opportunities)
+    interest_map = {opportunity.id: get_user_interest_for_opportunity(current_user.id, opportunity.id) for opportunity in opportunities}
+    return render_template("opportunities.html", user=current_user, opportunities=opportunities, interest_map=interest_map)
 
 
 @app.route("/opportunities/<int:opportunity_id>")
 @login_required
 def opportunity_detail(opportunity_id):
     opportunity = Opportunity.query.get_or_404(opportunity_id)
-    return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity)
+    interest = get_user_interest_for_opportunity(current_user.id, opportunity.id)
+    return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity, interest=interest)
+
+
+@app.route("/opportunities/<int:opportunity_id>/interest", methods=["POST"])
+@login_required
+def express_interest(opportunity_id):
+    opportunity = Opportunity.query.get_or_404(opportunity_id)
+    if opportunity.status == "closed":
+        flash("This opportunity is closed and is no longer accepting new interest.", "error")
+        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+
+    interest = OpportunityInterest.query.filter_by(user_id=current_user.id, opportunity_id=opportunity.id).first()
+    if interest and interest.status == "interested":
+        flash("You already expressed interest in this opportunity.", "info")
+        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+
+    if interest is None:
+        interest = OpportunityInterest(user_id=current_user.id, opportunity_id=opportunity.id, status="interested")
+        db.session.add(interest)
+    else:
+        interest.status = "interested"
+        interest.updated_at = datetime.now(timezone.utc)
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("This opportunity is already linked to your account. Please review your current interests.", "error")
+        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+
+    flash("Your interest has been recorded.", "success")
+    return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+
+
+@app.route("/opportunities/<int:opportunity_id>/interest/withdraw", methods=["POST"])
+@login_required
+def withdraw_interest(opportunity_id):
+    opportunity = Opportunity.query.get_or_404(opportunity_id)
+    interest = OpportunityInterest.query.filter_by(user_id=current_user.id, opportunity_id=opportunity.id).first()
+    if interest is None or interest.status != "interested":
+        flash("You do not have an active interest in this opportunity.", "error")
+        return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity, interest=interest)
+
+    interest.status = "withdrawn"
+    interest.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    flash("Your interest in this opportunity has been withdrawn.", "success")
+    return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
 
 
 @app.route("/logout", methods=["POST"])
