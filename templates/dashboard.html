@@ -108,5 +108,38 @@
       </form>
     </main>
   </div>
+
+  <section class="discovery-panel">
+    <div class="discovery-header">
+      <div>
+        <p class="eyebrow">ADHAYAN / DISCOVER</p>
+        <h3>Discover Opportunities</h3>
+      </div>
+      <a class="btn-secondary" href="{{ url_for('opportunities') }}">Browse Opportunities</a>
+    </div>
+
+    {% if featured_opportunities %}
+      <div class="opportunity-mini-grid">
+        {% for opportunity in featured_opportunities %}
+          <article class="opportunity-mini-card">
+            <div class="mini-meta">
+              <span>{{ opportunity.category }}</span>
+              <span>{{ opportunity.difficulty }}</span>
+            </div>
+            <h4>{{ opportunity.title }}</h4>
+            <p>{{ opportunity.description[:120] }}{% if opportunity.description|length > 120 %}...{% endif %}</p>
+            <div class="mini-footer">
+              <span>{{ opportunity.estimated_hours_per_week }} hrs/week</span>
+              <a href="{{ url_for('opportunity_detail', opportunity_id=opportunity.id) }}">View</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>There are currently no active opportunities available. Check back soon for new ADHAYAN collaborations.</p>
+      </div>
+    {% endif %}
+  </section>
 </section>
 {% endblock %}
