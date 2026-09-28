@@ -961,7 +961,7 @@ body {
   .initiative-detail-layout { grid-template-columns: 1fr; gap: 28px; padding-block: 28px 70px; }
   .initiative-data-rail { position: static; }
 }
-@media (max-width: 390px) {
+@media (max-width: 400px) {
   .hero-copy h1, .hero-editorial-copy h1, .about-intro-grid h1, .newsroom-header h1, .article-hero h1, .initiatives-heading-row h1, .initiative-detail-header h1 { font-size: 42px; overflow-wrap: anywhere; }
   .home-initiative-row { grid-template-columns: 28px minmax(0,1fr) 32px; }
   .newsroom-row { grid-template-columns: 22px 58px minmax(0,1fr); gap: 8px; }
