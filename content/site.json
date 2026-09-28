@@ -2,6 +2,64 @@
   "organization_name": "ADHAYAN",
   "tagline": "Learn deeply. Build what matters.",
   "hero_title": "Learning becomes action.",
-  "intro": "ADHAYAN's organizational introduction will be published here.",
-  "featured_news": []
+  "hero_eyebrow": "An organization for learning in action",
+  "intro": "ADHAYAN is a good organization?",
+  "hero_about_label": "Meet ADHAYAN",
+  "hero_opportunities_label": "Explore initiatives",
+  "nav_cta_label": "Latest updates",
+  "about_page_eyebrow": "ADHAYAN / ABOUT",
+  "news_page_eyebrow": "ADHAYAN / NEWSROOM",
+  "opportunities_page_eyebrow": "ADHAYAN / INITIATIVES",
+  "journey_steps": [
+    "Discover",
+    "Join",
+    "Work",
+    "Contribute"
+  ],
+  "news_section_eyebrow": "From the organization",
+  "news_section_title": "News & announcements",
+  "news_all_label": "All news",
+  "news_page_title": "News & announcements",
+  "news_page_intro": "Updates, notes, and announcements from ADHAYAN.",
+  "news_empty_message": "There are no published updates yet.",
+  "news_read_label": "Read update",
+  "news_home_read_label": "Read update",
+  "home_news_empty_message": "Updates from ADHAYAN will appear here.",
+  "news_detail_back_label": "All news",
+  "featured_opportunities_eyebrow": "Ways to take part",
+  "featured_opportunities_title": "Featured initiatives",
+  "featured_opportunities_all_label": "View all",
+  "pathways_eyebrow": "Open pathways",
+  "pathways_heading": "Ideas become shared work.",
+  "pathways_link_label": "Explore initiatives",
+  "opportunities_page_title": "Explore the work",
+  "opportunities_page_intro": "Public initiatives and opportunities to learn, build, and contribute.",
+  "opportunities_empty_message": "There are no published initiatives yet.",
+  "opportunity_more_info_label": "More information",
+  "opportunity_open_label": "Open",
+  "opportunity_closed_label": "Closed",
+  "opportunity_detail_back_label": "All initiatives",
+  "opportunity_difficulty_label": "Difficulty",
+  "opportunity_expected_time_label": "Expected time",
+  "opportunity_skills_label": "Skills",
+  "weekly_hours_suffix": "hrs/week",
+  "about_people_count_label": "people",
+  "about_countries_count_label": "countries",
+  "home_sections": [],
+  "featured_news": [],
+  "featured_news_override": true,
+  "navigation": [
+    {
+      "page": "about",
+      "label": "About"
+    },
+    {
+      "page": "opportunities",
+      "label": "Initiatives"
+    },
+    {
+      "page": "news",
+      "label": "News"
+    }
+  ]
 }
