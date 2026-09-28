@@ -17,9 +17,9 @@
     <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">Menu</button>
     <nav class="main-nav" id="primary-nav" aria-label="Main navigation">
       {% for item in site_content.navigation %}
-        {% if item.page == 'about' %}<a href="{{ url_for('about') }}">{{ item.label }}</a>
-        {% elif item.page == 'opportunities' %}<a href="{{ url_for('opportunities') }}">{{ item.label }}</a>
-        {% elif item.page == 'news' %}<a href="{{ url_for('news_index') }}">{{ item.label }}</a>{% endif %}
+        {% if item.page == 'about' %}<a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}is-active{% endif %}" {% if request.endpoint == 'about' %}aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% elif item.page == 'opportunities' %}<a href="{{ url_for('opportunities') }}" class="{% if request.endpoint in ['opportunities', 'opportunity_detail'] %}is-active{% endif %}" {% if request.endpoint in ['opportunities', 'opportunity_detail'] %}aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% elif item.page == 'news' %}<a href="{{ url_for('news_index') }}" class="{% if request.endpoint in ['news_index', 'news_detail'] %}is-active{% endif %}" {% if request.endpoint in ['news_index', 'news_detail'] %}aria-current="page"{% endif %}>{{ item.label }}</a>{% endif %}
       {% endfor %}
     </nav>
     <a class="nav-cta" href="{{ url_for('news_index') }}">{{ site_content.nav_cta_label }}</a>

@@ -520,8 +520,8 @@ def test_admin_site_form_updates_home_copy_navigation_featured_news_and_public_p
     test_client.post("/admin/about", data=about_form)
     public_about = test_client.get("/about").data
     assert b"Organization story" in public_about
-    assert b"1 colleagues" in public_about
-    assert b"1 represented places" in public_about
+    assert b'<span class="people-count">1 <small>colleagues</small></span>' in public_about
+    assert b'<span class="people-count">1 <small>represented places</small></span>' in public_about
     invalid_feature = dict(form, featured_news=["does-not-exist"])
     invalid_response = test_client.post("/admin/site", data=invalid_feature)
     assert invalid_response.status_code == 400

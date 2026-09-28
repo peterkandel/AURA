@@ -1,9 +1,27 @@
 {% extends 'layout.html' %}
 {% block title %}{{ about_content.title }} | {{ site_content.organization_name }}{% endblock %}
 {% block content %}
-<main class="page-wrap content-page"><header class="page-intro"><p class="eyebrow">{{ site_content.about_page_eyebrow }}</p><h1>{{ about_content.title }}</h1><p>{{ about_content.intro }}</p></header>
-  {% for section in sections %}<section class="content-section"><div class="custom-copy-section"><p class="eyebrow">{{ section.eyebrow }}</p><h2>{{ section.heading }}</h2><div class="article-body">{{ section.body }}</div></div></section>{% endfor %}
-  <section class="content-section"><div class="section-heading"><div><p class="eyebrow">{{ about_content.founders_eyebrow }}</p><h2>{{ about_content.founders_heading }}</h2></div><span class="section-count">{{ founders|length }} {{ site_content.about_people_count_label }}</span></div>{% if founders %}<div class="people-grid">{% for person in founders %}<article class="person-card">{% if person.portrait_url %}<img class="person-portrait" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<div class="person-monogram" aria-hidden="true">{{ person.name[:1]|upper }}</div>{% endif %}<div><p class="eyebrow">{{ person.role }}</p><h3>{{ person.name }}</h3><p>{{ person.bio }}</p></div></article>{% endfor %}</div>{% else %}<div class="empty-state"><p>{{ about_content.founders_empty_message }}</p></div>{% endif %}</section>
-  <section class="content-section"><div class="section-heading"><div><p class="eyebrow">{{ about_content.national_heads_eyebrow }}</p><h2>{{ about_content.national_heads_heading }}</h2></div><span class="section-count">{{ heads_by_country|length }} {{ site_content.about_countries_count_label }}</span></div>{% if heads_by_country %}{% for country, people in heads_by_country.items() %}<section class="country-group"><h3>{{ country }}</h3><div class="people-grid">{% for person in people %}<article class="person-card">{% if person.portrait_url %}<img class="person-portrait" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<div class="person-monogram" aria-hidden="true">{{ person.name[:1]|upper }}</div>{% endif %}<div><p class="eyebrow">{{ person.role }}</p><h3>{{ person.name }}</h3><p>{{ person.bio }}</p></div></article>{% endfor %}</div></section>{% endfor %}{% else %}<div class="empty-state"><p>{{ about_content.national_heads_empty_message }}</p></div>{% endif %}</section>
+<main class="about-page">
+  <header class="about-intro page-wrap"><div class="about-intro-index"><span class="eyebrow">{{ site_content.about_page_eyebrow }}</span><span class="folio-mark">PEOPLE / PURPOSE</span></div><div class="about-intro-grid"><h1>{{ about_content.title }}</h1><p class="about-lead">{{ about_content.intro }}</p></div></header>
+
+  {% for section in sections %}<section class="about-editorial-section page-wrap"><span class="manifesto-number" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span><div class="about-editorial-copy"><p class="eyebrow">{{ section.eyebrow }}</p><h2>{{ section.heading }}</h2><div class="editorial-body">{{ section.body }}</div></div></section>{% endfor %}
+
+  <section class="people-editorial page-wrap">
+    <header class="people-section-head"><div><p class="eyebrow">{{ about_content.founders_eyebrow }}</p><h2>{{ about_content.founders_heading }}</h2></div><span class="people-count">{{ founders|length }} <small>{{ site_content.about_people_count_label }}</small></span></header>
+    {% if founders %}
+      {% set lead = founders[0] %}
+      <article class="founder-lead">
+        {% if lead.portrait_url %}<div class="founder-image"><img src="{{ lead.portrait_url }}" alt="Portrait of {{ lead.name }}" loading="lazy"></div>{% else %}<div class="founder-image founder-image--empty"><span aria-hidden="true">{{ lead.name[:1]|upper }}</span></div>{% endif %}
+        <div class="founder-profile"><p class="eyebrow">{{ lead.role }}</p><h3>{{ lead.name }}</h3><p>{{ lead.bio }}</p><span class="profile-index">FOUNDER / 01</span></div>
+      </article>
+      {% if founders|length > 1 %}<ol class="people-index-list">{% for person in founders[1:] %}<li><span class="people-index-number">{{ '%02d'|format(loop.index + 1) }}</span><div>{% if person.portrait_url %}<img class="people-index-image" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<span class="people-index-monogram" aria-hidden="true">{{ person.name[:1]|upper }}</span>{% endif %}</div><div class="people-index-copy"><p class="eyebrow">{{ person.role }}</p><h3>{{ person.name }}</h3><p>{{ person.bio }}</p></div></li>{% endfor %}</ol>{% endif %}
+    {% else %}<div class="editorial-empty"><span class="empty-index" aria-hidden="true">F / 01</span><p>{{ about_content.founders_empty_message }}</p></div>{% endif %}
+  </section>
+
+  <section class="national-editorial">
+    <div class="page-wrap"><header class="people-section-head"><div><p class="eyebrow">{{ about_content.national_heads_eyebrow }}</p><h2>{{ about_content.national_heads_heading }}</h2></div><span class="people-count">{{ heads_by_country|length }} <small>{{ site_content.about_countries_count_label }}</small></span></header>
+      {% if heads_by_country %}<div class="country-ledger">{% for country, people in heads_by_country.items() %}<section class="country-ledger-row"><h3>{{ country }}</h3><ol>{% for person in people %}<li><span class="people-index-number">{{ '%02d'|format(loop.index) }}</span>{% if person.portrait_url %}<img class="ledger-portrait" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<span class="ledger-monogram" aria-hidden="true">{{ person.name[:1]|upper }}</span>{% endif %}<div class="ledger-person"><p class="eyebrow">{{ person.role }}</p><h4>{{ person.name }}</h4><p>{{ person.bio }}</p></div></li>{% endfor %}</ol></section>{% endfor %}</div>{% else %}<div class="editorial-empty"><span class="empty-index" aria-hidden="true">NH / 01</span><p>{{ about_content.national_heads_empty_message }}</p></div>{% endif %}
+    </div>
+  </section>
 </main>
 {% endblock %}

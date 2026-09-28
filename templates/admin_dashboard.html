@@ -1,17 +1,20 @@
 {% extends 'layout.html' %}
 {% block title %}Admin | ADHAYAN{% endblock %}
 {% block content %}
-<main class="page-wrap admin-page">
-  <header class="admin-header"><div><p class="eyebrow">ADHAYAN / CONTENT CONTROL</p><h1>Admin</h1><p class="muted">Manage public content and organization information.</p></div><form method="post" action="{{ url_for('admin_logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button-quiet" type="submit">Sign out</button></form></header>
+<main class="page-wrap admin-page admin-workspace">
+  <header class="admin-workspace-head"><div><p class="eyebrow">ADHAYAN / CONTENT CONTROL</p><h1>Admin</h1><p class="muted">Manage public content and organization information.</p></div><form method="post" action="{{ url_for('admin_logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button-quiet" type="submit">Sign out</button></form></header>
   {% if not persistence_ready %}<div class="admin-notice"><strong>GitHub persistence is not configured.</strong><span>Content is read-only until all required environment variables are set.</span></div>{% endif %}
-  <section class="admin-section"><div class="section-heading"><div><p class="eyebrow">SITE CONTENT</p><h2>Manage</h2></div></div><nav class="admin-nav" aria-label="Content management">
-    <a href="{{ url_for('admin_site') }}"><span>Homepage / Site</span><strong>Edit →</strong></a>
-    <a href="{{ url_for('admin_about') }}"><span>About page</span><strong>Edit →</strong></a>
-    <a href="{{ url_for('admin_news') }}"><span>News &amp; announcements</span><strong>{{ counts.news if counts.news is not none else 'Unavailable' }} / Manage →</strong></a>
-    <a href="{{ url_for('admin_opportunities') }}"><span>Opportunities</span><strong>{{ counts.opportunities if counts.opportunities is not none else 'Unavailable' }} / Manage →</strong></a>
-    <a href="{{ url_for('admin_founders') }}"><span>Founders</span><strong>{{ counts.founders if counts.founders is not none else 'Unavailable' }} / Manage →</strong></a>
-    <a href="{{ url_for('admin_national_heads') }}"><span>National Heads</span><strong>{{ counts.national_heads if counts.national_heads is not none else 'Unavailable' }} / Manage →</strong></a>
-    <a href="{{ url_for('admin_settings') }}"><span>Settings / Configuration</span><strong>View →</strong></a>
-  </nav></section>
+  <section class="admin-summary" aria-label="Content totals"><div><span class="eyebrow">NEWS</span><strong>{{ counts.news if counts.news is not none else '—' }}</strong><span>entries</span></div><div><span class="eyebrow">INITIATIVES</span><strong>{{ counts.opportunities if counts.opportunities is not none else '—' }}</strong><span>entries</span></div><div><span class="eyebrow">FOUNDERS</span><strong>{{ counts.founders if counts.founders is not none else '—' }}</strong><span>entries</span></div><div><span class="eyebrow">NATIONAL HEADS</span><strong>{{ counts.national_heads if counts.national_heads is not none else '—' }}</strong><span>entries</span></div></section>
+  <div class="admin-workspace-grid">
+    <section class="admin-workspace-primary"><header class="admin-section-head"><div><p class="eyebrow">CONTENT LIBRARY</p><h2>Public pages</h2></div><span class="folio-mark">01 / EDIT</span></header><nav class="admin-library" aria-label="Content management">
+      <a href="{{ url_for('admin_site') }}"><span class="library-index">01</span><span class="library-copy"><strong>Homepage / Site</strong><small>Identity, navigation, page copy, featured News</small></span><span class="library-action">Edit ↗</span></a>
+      <a href="{{ url_for('admin_about') }}"><span class="library-index">02</span><span class="library-copy"><strong>About page</strong><small>Organization introduction and custom sections</small></span><span class="library-action">Edit ↗</span></a>
+      <a href="{{ url_for('admin_news') }}"><span class="library-index">03</span><span class="library-copy"><strong>News &amp; announcements</strong><small>{{ counts.news if counts.news is not none else 'Unavailable' }} entries</small></span><span class="library-action">Manage ↗</span></a>
+      <a href="{{ url_for('admin_opportunities') }}"><span class="library-index">04</span><span class="library-copy"><strong>Opportunities</strong><small>{{ counts.opportunities if counts.opportunities is not none else 'Unavailable' }} entries</small></span><span class="library-action">Manage ↗</span></a>
+      <a href="{{ url_for('admin_founders') }}"><span class="library-index">05</span><span class="library-copy"><strong>Founders</strong><small>{{ counts.founders if counts.founders is not none else 'Unavailable' }} profiles</small></span><span class="library-action">Manage ↗</span></a>
+      <a href="{{ url_for('admin_national_heads') }}"><span class="library-index">06</span><span class="library-copy"><strong>National Heads</strong><small>{{ counts.national_heads if counts.national_heads is not none else 'Unavailable' }} profiles</small></span><span class="library-action">Manage ↗</span></a>
+    </nav></section>
+    <aside class="admin-workspace-aside"><p class="eyebrow">SYSTEM</p><h2>Configuration</h2><p>Review the GitHub content repository connection and deployment settings.</p><a class="text-link" href="{{ url_for('admin_settings') }}">Open settings ↗</a></aside>
+  </div>
 </main>
 {% endblock %}

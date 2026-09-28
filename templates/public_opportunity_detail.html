@@ -1,23 +1,11 @@
 {% extends 'layout.html' %}
 {% block title %}{{ opportunity.title }} | {{ site_content.organization_name }}{% endblock %}
 {% block content %}
-<main class="page-wrap content-page article-page">
-  <a class="text-link back-link" href="{{ url_for('opportunities') }}">← {{ site_content.opportunity_detail_back_label }}</a>
-  <article>
-    <header class="article-header">
-      <div class="news-meta">
-        <span>{{ opportunity.category }}</span>
-        {% if opportunity.closed %}<span class="status-closed">{{ site_content.opportunity_closed_label }}</span>{% else %}<span class="status-active">{{ site_content.opportunity_open_label }}</span>{% endif %}
-      </div>
-      <h1>{{ opportunity.title }}</h1>
-    </header>
-    {% if opportunity.image_url %}<img class="article-image" src="{{ opportunity.image_url }}" alt="{{ opportunity.image_alt|default(opportunity.title) }}" loading="lazy">{% endif %}
-    <div class="article-body">{{ opportunity.description }}</div>
-    <div class="detail-facts">
-      {% if opportunity.difficulty %}<div><span>{{ site_content.opportunity_difficulty_label }}</span><strong>{{ opportunity.difficulty }}</strong></div>{% endif %}
-      {% if opportunity.weekly_hours %}<div><span>{{ site_content.opportunity_expected_time_label }}</span><strong>{{ opportunity.weekly_hours }} {{ site_content.weekly_hours_suffix }}</strong></div>{% endif %}
-      {% if opportunity.skills %}<div><span>{{ site_content.opportunity_skills_label }}</span><strong>{{ opportunity.skills|join(', ') }}</strong></div>{% endif %}
-    </div>
-  </article>
+<main class="initiative-detail-page">
+  <header class="initiative-detail-header page-wrap"><a class="text-link article-back" href="{{ url_for('opportunities') }}">← {{ site_content.opportunity_detail_back_label }}</a><div class="initiative-detail-kicker"><p class="eyebrow">{{ opportunity.category }}</p><span class="status-label {% if opportunity.closed %}status-closed{% else %}status-active{% endif %}">{% if opportunity.closed %}{{ site_content.opportunity_closed_label }}{% else %}{{ site_content.opportunity_open_label }}{% endif %}</span></div><h1>{{ opportunity.title }}</h1><p class="initiative-detail-deck">{{ opportunity.description }}</p></header>
+  {% if opportunity.image_url %}<figure class="initiative-detail-image page-wrap"><img src="{{ opportunity.image_url }}" alt="{{ opportunity.image_alt|default(opportunity.title) }}" loading="lazy">{% if opportunity.image_alt %}<figcaption>{{ opportunity.image_alt }}</figcaption>{% endif %}</figure>{% endif %}
+  <div class="initiative-detail-layout page-wrap"><article class="initiative-detail-body">{% if opportunity.topics %}<section class="initiative-detail-section"><h2>Topics</h2><div class="tag-list">{% for topic in opportunity.topics %}<span>{{ topic }}</span>{% endfor %}</div></section>{% endif %}</article>
+    <aside class="initiative-data-rail"><p class="eyebrow">PROGRAM SNAPSHOT</p><dl>{% if opportunity.difficulty %}<div><dt>{{ site_content.opportunity_difficulty_label }}</dt><dd>{{ opportunity.difficulty }}</dd></div>{% endif %}{% if opportunity.weekly_hours %}<div><dt>{{ site_content.opportunity_expected_time_label }}</dt><dd>{{ opportunity.weekly_hours }} {{ site_content.weekly_hours_suffix }}</dd></div>{% endif %}{% if opportunity.skills %}<div><dt>{{ site_content.opportunity_skills_label }}</dt><dd>{{ opportunity.skills|join(', ') }}</dd></div>{% endif %}</dl></aside>
+  </div>
 </main>
 {% endblock %}
