@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+{% block title %}{{ 'Edit' if editing else 'Add' }} {{ label }} | ADHAYAN Admin{% endblock %}
+{% block content %}
+<main class="page-wrap admin-page">
+  <header class="admin-header"><div><p class="eyebrow"><a href="{{ url_for('admin_dashboard') }}">ADMIN</a> / <a href="{{ url_for('admin_record_edit', collection=collection, record_id=values.id) if editing else url_for('admin_record_new', collection=collection) }}">{{ label|upper }}</a></p><h1>{{ 'Edit' if editing else 'Add' }} {{ {'news':'news article','opportunities':'opportunity','founders':'founder','national_heads':'national head'}[collection] }}</h1></div><a class="button-quiet" href="{{ url_for('admin_news') if collection == 'news' else url_for('admin_opportunities') if collection == 'opportunities' else url_for('admin_founders') if collection == 'founders' else url_for('admin_national_heads') }}">Back to list</a></header>
+  {% if not persistence_ready %}<div class="admin-notice"><strong>GitHub persistence is not configured.</strong><span>Changes cannot be saved until GitHub settings are available.</span></div>{% endif %}
+  {% if errors %}<div class="form-errors" role="alert"><strong>Review these fields:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+  <form method="post" class="cms-form" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field"><span>Slug</span><input name="slug" value="{{ values.id|default('') }}" required pattern="[a-z0-9]+(-[a-z0-9]+)*"><small>Lowercase letters, numbers, and hyphens. This is the public URL.</small></label>
+    {% if collection == 'news' %}
+      <label class="field"><span>Title</span><input name="title" value="{{ values.title|default('') }}" maxlength="240" required></label>
+      <label class="field"><span>Summary</span><textarea name="summary" rows="3" maxlength="1000" required>{{ values.summary|default('') }}</textarea></label>
+      <label class="field"><span>Article body</span><textarea name="body" rows="12" maxlength="30000" required>{{ values.body|default('') }}</textarea></label>
+      <div class="field-grid"><label class="field"><span>Category</span><input name="category" value="{{ values.category|default('') }}" required></label><label class="field"><span>Publication date</span><input type="date" name="published_at" value="{{ values.published_at|default('') }}" required></label></div>
+      <label class="field"><span>Byline</span><input name="byline" value="{{ values.byline|default('') }}" required></label>
+      <label class="field"><span>Image URL (HTTPS)</span><input type="url" name="image_url" value="{{ values.image_url|default('') }}" placeholder="https://"></label>
+      <label class="field"><span>Image description</span><input name="image_alt" value="{{ values.image_alt|default('') }}" maxlength="300"></label>
+      <div class="field-grid"><label class="field"><span>Display order</span><input type="number" name="order" min="0" max="1000000" value="{{ values.order|default(10) }}" required></label><div class="cms-toggles"><label><input type="checkbox" name="published" {% if values.published|default(false) %}checked{% endif %}> Published</label></div></div><p class="muted">Choose homepage featured articles in Homepage / Site settings.</p>
+    {% elif collection == 'opportunities' %}
+      <label class="field"><span>Title</span><input name="title" value="{{ values.title|default('') }}" maxlength="240" required></label>
+      <label class="field"><span>Description</span><textarea name="description" rows="10" maxlength="10000" required>{{ values.description|default('') }}</textarea></label>
+      <div class="field-grid"><label class="field"><span>Category</span><input name="category" value="{{ values.category|default('') }}" required></label><label class="field"><span>Difficulty</span><input name="difficulty" value="{{ values.difficulty|default('') }}"></label></div>
+      <label class="field"><span>Topics</span><textarea name="topics" rows="2">{{ values.topics|default([])|join(', ') }}</textarea><small>Separate topics with commas or new lines.</small></label>
+      <label class="field"><span>Skills</span><textarea name="skills" rows="2">{{ values.skills|default([])|join(', ') }}</textarea><small>Separate skills with commas or new lines.</small></label>
+      <div class="field-grid"><label class="field"><span>Expected hours per week</span><input type="number" name="weekly_hours" min="0" max="168" value="{{ values.weekly_hours|default(0) }}" required></label><label class="field"><span>Display order</span><input type="number" name="order" min="0" max="1000000" value="{{ values.order|default(10) }}" required></label></div>
+      <label class="field"><span>Image URL (HTTPS)</span><input type="url" name="image_url" value="{{ values.image_url|default('') }}" placeholder="https://"></label><label class="field"><span>Image description</span><input name="image_alt" value="{{ values.image_alt|default('') }}" maxlength="300"></label>
+      <div class="cms-toggles"><label><input type="checkbox" name="published" {% if values.published|default(false) %}checked{% endif %}> Published</label><label><input type="checkbox" name="closed" {% if values.closed|default(false) %}checked{% endif %}> Closed</label><label><input type="checkbox" name="featured" {% if values.featured|default(false) %}checked{% endif %}> Featured</label></div>
+    {% else %}
+      <label class="field"><span>Name</span><input name="name" value="{{ values.name|default('') }}" maxlength="160" required></label>
+      <label class="field"><span>Role / title</span><input name="role" value="{{ values.role|default('') }}" maxlength="160" required></label>
+      {% if collection == 'national_heads' %}<label class="field"><span>Country</span><input name="country" value="{{ values.country|default('') }}" maxlength="120" required></label>{% endif %}
+      <label class="field"><span>Biography</span><textarea name="bio" rows="6" maxlength="5000" required>{{ values.bio|default('') }}</textarea></label>
+      <label class="field"><span>Portrait URL (HTTPS)</span><input type="url" name="portrait_url" value="{{ values.portrait_url|default('') }}" placeholder="https://"></label>
+      <div class="field-grid"><label class="field"><span>Display order</span><input type="number" name="order" min="0" max="1000000" value="{{ values.order|default(10) }}" required></label><div class="cms-toggles"><label><input type="checkbox" name="active" {% if values.active|default(true) %}checked{% endif %}> Active on public page</label></div></div>
+    {% endif %}
+    <div class="form-actions"><button class="button-primary" type="submit" {% if not persistence_ready %}disabled{% endif %}>Save changes</button><a class="button-quiet" href="{{ url_for('admin_news') if collection == 'news' else url_for('admin_opportunities') if collection == 'opportunities' else url_for('admin_founders') if collection == 'founders' else url_for('admin_national_heads') }}">Cancel</a></div>
+  </form>
+</main>
+{% endblock %}

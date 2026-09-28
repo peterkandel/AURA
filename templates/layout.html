@@ -3,71 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADHAYAN — Learn, Build, Explore</title>
-  <meta name="description" content="ADHAYAN — A cutting-edge learning and innovation collective.">
+  <title>{% block title %}{{ site_content.organization_name|default('ADHAYAN') }}{% endblock %}</title>
+  <meta name="description" content="{{ site_content.tagline|default('Learn deeply. Build what matters.') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Serif+Display&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
 </head>
 <body>
-  <div class="background-grid"></div>
-  <div class="noise-layer"></div>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a href="{{ url_for('home') }}" class="brand-mark">
-        <span class="brand-icon"></span>
-        <span>ADHAYAN</span>
-      </a>
-      <nav class="main-nav">
-        <a href="{{ url_for('home') }}#about">Manifesto</a>
-        <a href="{{ url_for('home') }}#pillars">Pillars</a>
-        <a href="{{ url_for('home') }}#projects">Work</a>
-        <a href="{{ url_for('home') }}#team">Crew</a>
-        {% if user and user.is_authenticated %}
-          <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('opportunities') }}">Opportunities</a>
-          <form class="inline-form" method="post" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="link-button">Logout</button>
-          </form>
-        {% else %}
-          <a href="{{ url_for('auth_page', mode='login') }}">Member Access</a>
-        {% endif %}
-      </nav>
-      {% if user and user.is_authenticated %}
-        <a class="nav-cta" href="{{ url_for('dashboard') }}">Open Portal</a>
-      {% else %}
-        <a class="nav-cta" href="{{ url_for('auth_page', mode='signup') }}">Join /05</a>
-      {% endif %}
-    </div>
-  </header>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="flash-stack">
-        {% for category, message in messages %}
-          <div class="flash flash--{{ category }}">{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
-
+  <div class="background-grid" aria-hidden="true"></div>
+  <header class="topbar"><div class="topbar-inner">
+    <a href="{{ url_for('home') }}" class="brand-mark"><span class="brand-icon" aria-hidden="true"></span><span>{{ site_content.organization_name }}</span></a>
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">Menu</button>
+    <nav class="main-nav" id="primary-nav" aria-label="Main navigation">
+      {% for item in site_content.navigation %}
+        {% if item.page == 'about' %}<a href="{{ url_for('about') }}">{{ item.label }}</a>
+        {% elif item.page == 'opportunities' %}<a href="{{ url_for('opportunities') }}">{{ item.label }}</a>
+        {% elif item.page == 'news' %}<a href="{{ url_for('news_index') }}">{{ item.label }}</a>{% endif %}
+      {% endfor %}
+    </nav>
+    <a class="nav-cta" href="{{ url_for('news_index') }}">{{ site_content.nav_cta_label }}</a>
+  </div></header>
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash flash--{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
   {% block content %}{% endblock %}
-
-  <footer class="site-footer">
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <div class="brand-mark"><span class="brand-icon"></span><span>ADHAYAN</span></div>
-        <p>ADHAYAN — Learn together, build what matters.</p>
-      </div>
-      <div class="footer-links">
-        <a href="{{ url_for('home') }}#about">Manifesto</a>
-        <a href="{{ url_for('home') }}#pillars">Pillars</a>
-        <a href="{{ url_for('home') }}#projects">Work</a>
-        <a href="{{ url_for('home') }}#team">Crew</a>
-      </div>
-    </div>
-  </footer>
+  <footer class="site-footer"><div class="footer-inner">
+    <a class="brand-mark" href="{{ url_for('home') }}"><span class="brand-icon" aria-hidden="true"></span><span>{{ site_content.organization_name }}</span></a><p>{{ site_content.tagline|default('Learn deeply. Build what matters.') }}</p>
+    <div class="footer-links">{% for item in site_content.navigation %}{% if item.page == 'about' %}<a href="{{ url_for('about') }}">{{ item.label }}</a>{% elif item.page == 'opportunities' %}<a href="{{ url_for('opportunities') }}">{{ item.label }}</a>{% elif item.page == 'news' %}<a href="{{ url_for('news_index') }}">{{ item.label }}</a>{% endif %}{% endfor %}<a href="{{ url_for('admin_login') }}">Admin</a></div>
+  </div></footer>
+  <script>
+    const menuButton = document.querySelector('.mobile-menu-toggle');
+    const nav = document.querySelector('#primary-nav');
+    menuButton?.addEventListener('click', () => {
+      const expanded = menuButton.getAttribute('aria-expanded') === 'true';
+      menuButton.setAttribute('aria-expanded', String(!expanded));
+      nav.classList.toggle('is-open', !expanded);
+    });
+  </script>
 </body>
 </html>

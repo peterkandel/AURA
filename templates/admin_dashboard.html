@@ -1,0 +1,17 @@
+{% extends 'layout.html' %}
+{% block title %}Admin | ADHAYAN{% endblock %}
+{% block content %}
+<main class="page-wrap admin-page">
+  <header class="admin-header"><div><p class="eyebrow">ADHAYAN / CONTENT CONTROL</p><h1>Admin</h1><p class="muted">Manage public content and organization information.</p></div><form method="post" action="{{ url_for('admin_logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button-quiet" type="submit">Sign out</button></form></header>
+  {% if not persistence_ready %}<div class="admin-notice"><strong>GitHub persistence is not configured.</strong><span>Content is read-only until all required environment variables are set.</span></div>{% endif %}
+  <section class="admin-section"><div class="section-heading"><div><p class="eyebrow">SITE CONTENT</p><h2>Manage</h2></div></div><nav class="admin-nav" aria-label="Content management">
+    <a href="{{ url_for('admin_site') }}"><span>Homepage / Site</span><strong>Edit →</strong></a>
+    <a href="{{ url_for('admin_about') }}"><span>About page</span><strong>Edit →</strong></a>
+    <a href="{{ url_for('admin_news') }}"><span>News &amp; announcements</span><strong>{{ counts.news if counts.news is not none else 'Unavailable' }} / Manage →</strong></a>
+    <a href="{{ url_for('admin_opportunities') }}"><span>Opportunities</span><strong>{{ counts.opportunities if counts.opportunities is not none else 'Unavailable' }} / Manage →</strong></a>
+    <a href="{{ url_for('admin_founders') }}"><span>Founders</span><strong>{{ counts.founders if counts.founders is not none else 'Unavailable' }} / Manage →</strong></a>
+    <a href="{{ url_for('admin_national_heads') }}"><span>National Heads</span><strong>{{ counts.national_heads if counts.national_heads is not none else 'Unavailable' }} / Manage →</strong></a>
+    <a href="{{ url_for('admin_settings') }}"><span>Settings / Configuration</span><strong>View →</strong></a>
+  </nav></section>
+</main>
+{% endblock %}

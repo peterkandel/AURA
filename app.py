@@ -1,551 +1,686 @@
+import hmac
 import json
 import os
 import re
 import time
-from datetime import datetime, timezone
-from typing import Iterable
-from urllib.parse import urlsplit
+from functools import wraps
+from pathlib import Path
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFError, CSRFProtect
-from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import IntegrityError
-from werkzeug.security import check_password_hash, generate_password_hash
-
 from dotenv import load_dotenv
 
+from content_service import (
+    COLLECTIONS,
+    ContentError,
+    ContentRepository,
+    ContentValidationError,
+)
+from github_persistence import GitHubContentError, GitHubContentStore
+
+
 load_dotenv()
-
-
-def normalize_database_url(database_url: str | None) -> str | None:
-    if not database_url:
-        return database_url
-
-    parsed_url = make_url(database_url)
-    if parsed_url.drivername in {"postgres", "postgresql"}:
-        parsed_url = parsed_url.set(drivername="postgresql+psycopg")
-        return parsed_url.render_as_string(hide_password=False)
-    return database_url
-
 
 app = Flask(__name__)
 app.config["APP_ENV"] = os.getenv("APP_ENV", "development").lower()
 app.config["DEBUG"] = app.config["APP_ENV"] == "development" and os.getenv("FLASK_DEBUG", "0") == "1"
-
-DEFAULT_DEV_SECRET_KEY = "adhyayan-local-dev-secret-key-change-me"
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or (DEFAULT_DEV_SECRET_KEY if app.config["APP_ENV"] != "production" else "")
-database_url = os.getenv("DATABASE_URL", "sqlite:///adhyayan.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = normalize_database_url(database_url)
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or (
+    "adhyayan-local-dev-secret-key-change-me" if app.config["APP_ENV"] != "production" else ""
+)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
-app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true" if app.config["APP_ENV"] == "production" else "false").lower() == "true"
-app.config["PERMANENT_SESSION_LIFETIME"] = int(os.getenv("SESSION_LIFETIME_SECONDS", "3600"))
+app.config["SESSION_COOKIE_SECURE"] = os.getenv(
+    "SESSION_COOKIE_SECURE", "true" if app.config["APP_ENV"] == "production" else "false"
+).lower() == "true"
+app.config["PERMANENT_SESSION_LIFETIME"] = int(os.getenv("ADMIN_SESSION_LIFETIME_SECONDS", "1800"))
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+app.config["ADMIN_USERNAME"] = os.getenv("ADMIN_USERNAME", "admin")
+app.config["ADMIN_PASSWORD"] = os.getenv("ADMIN_PASSWORD", "")
+app.config["GITHUB_TOKEN"] = os.getenv("GITHUB_TOKEN", "")
+app.config["GITHUB_OWNER"] = os.getenv("GITHUB_OWNER", "")
+app.config["GITHUB_REPO"] = os.getenv("GITHUB_REPO", "")
+app.config["GITHUB_BRANCH"] = os.getenv("GITHUB_BRANCH", "main")
+app.config["GITHUB_CONTENT_ROOT"] = os.getenv("GITHUB_CONTENT_ROOT", "content")
+app.config["CONTENT_LOCAL_ROOT"] = Path(__file__).parent / "content"
 
 if app.config["APP_ENV"] == "production":
-    if not app.config["SECRET_KEY"] or app.config["SECRET_KEY"] == DEFAULT_DEV_SECRET_KEY:
+    if not app.config["SECRET_KEY"]:
         raise RuntimeError("A strong SECRET_KEY is required in production.")
-    if not os.getenv("DATABASE_URL") or app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
-        raise RuntimeError("A production DATABASE_URL must be configured.")
+    if not all(
+        app.config[key]
+        for key in ("ADMIN_PASSWORD", "GITHUB_TOKEN", "GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH", "GITHUB_CONTENT_ROOT")
+    ):
+        raise RuntimeError("Admin credentials and GitHub content persistence must be configured in production.")
 
-db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
-migrate = Migrate(app, db)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "auth_page"
-login_manager.login_message = "Please sign in to access your ADHAYAN dashboard."
 
-ALLOWED_ROLES = {"Student", "Researcher", "Developer", "Other"}
-ALLOWED_INTERESTS = {
-    "AI/ML",
-    "Robotics",
-    "Research",
-    "Open-source",
-    "Leadership",
+
+def build_content_repository():
+    store = GitHubContentStore(
+        token=app.config["GITHUB_TOKEN"],
+        owner=app.config["GITHUB_OWNER"],
+        repo=app.config["GITHUB_REPO"],
+        branch=app.config["GITHUB_BRANCH"],
+        content_root=app.config["GITHUB_CONTENT_ROOT"],
+    )
+    return ContentRepository(app.config["CONTENT_LOCAL_ROOT"], store)
+
+
+content_repository = build_content_repository()
+ADMIN_COLLECTIONS = {
+    "news": "News and announcements",
+    "opportunities": "Opportunities",
+    "founders": "Founders",
+    "national_heads": "National heads",
 }
-RATE_LIMIT_WINDOW_SECONDS = 300
-RATE_LIMIT_MAX_REQUESTS = 10
-
-rate_lock = {}
+ADMIN_DOCUMENTS = {**ADMIN_COLLECTIONS, "site": "Homepage / site settings", "about": "About page"}
+login_attempts = {}
 
 
-def is_valid_email(value: str) -> bool:
-    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value.strip()))
+def admin_authenticated():
+    return session.get("_adh_admin_authenticated") is True
 
 
-def is_valid_github_url(value: str) -> bool:
-    value = value.strip()
-    try:
-        parsed = urlsplit(value)
-    except ValueError:
-        return False
-    if parsed.scheme not in {"http", "https"} or parsed.hostname != "github.com":
-        return False
-    if parsed.username or parsed.password or parsed.query or parsed.fragment:
-        return False
-    return bool(re.fullmatch(r"/[A-Za-z0-9_.-]+/?", parsed.path))
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not admin_authenticated():
+            return redirect(url_for("admin_login", next=request.path))
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
-def is_valid_discord(value: str) -> bool:
-    value = value.strip()
-    return bool(re.fullmatch(r"[A-Za-z0-9_.-]{2,32}", value))
-
-
-def validate_weekly_commitment(value: str) -> bool:
-    try:
-        hours = int(value)
-        return 1 <= hours <= 40
-    except (TypeError, ValueError):
-        return False
-
-
-def is_safe_text(value: str, minimum: int = 1, maximum: int = 255) -> bool:
-    return minimum <= len(value) <= maximum and not any(ord(char) < 32 for char in value)
-
-
-def is_rate_limited(identifier: str) -> bool:
-    now = time.time()
-    bucket = rate_lock.setdefault(identifier, [])
-    rate_lock[identifier] = [stamp for stamp in bucket if now - stamp < RATE_LIMIT_WINDOW_SECONDS]
-    if len(rate_lock[identifier]) >= RATE_LIMIT_MAX_REQUESTS:
-        return True
-    rate_lock[identifier].append(now)
-    return False
-
-
-def auth_rate_limited(mode: str, email: str = "") -> bool:
-    ip = request.remote_addr or "unknown"
-    if is_rate_limited(f"auth:{mode}:ip:{ip}"):
-        return True
-    if mode == "login" and email and is_rate_limited(f"auth:login:email:{email}"):
-        return True
-    return False
-
-
-class User(db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    full_name = db.Column(db.String(120), nullable=False)
-    country = db.Column(db.String(120), nullable=False)
-    github_profile = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(32), nullable=False)
-    interests = db.Column(db.Text, nullable=False, default="[]")
-    experience = db.Column(db.Text, nullable=False)
-    contribution = db.Column(db.Text, nullable=False)
-    discord_username = db.Column(db.String(64), nullable=False)
-    weekly_commitment = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    opportunity_interests = db.relationship("OpportunityInterest", back_populates="user", cascade="all, delete-orphan")
-
-    @property
-    def is_active(self):
-        return True
-
-    @property
-    def is_authenticated(self):
-        return True
-
-    @property
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return str(self.id)
-
-    def set_password(self, password: str):
-        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
-
-    def check_password(self, password: str) -> bool:
-        return check_password_hash(self.password_hash, password)
-
-    @property
-    def profile(self):
-        return {
-            "id": self.id,
-            "full_name": self.full_name,
-            "email": self.email,
-            "country": self.country,
-            "github_profile": self.github_profile,
-            "role": self.role,
-            "interests": self.parse_interests(self.interests),
-            "experience": self.experience,
-            "contribution": self.contribution,
-            "discord_username": self.discord_username,
-            "weekly_commitment": self.weekly_commitment,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-        }
-
-    @staticmethod
-    def parse_interests(raw_value: str | None) -> list[str]:
-        if not raw_value:
-            return []
-        try:
-            import json
-            parsed = json.loads(raw_value)
-            if isinstance(parsed, list):
-                return [str(item) for item in parsed]
-        except Exception:
-            pass
-        return [part.strip() for part in str(raw_value).split(",") if part.strip()]
-
-    @staticmethod
-    def serialize_interests(values: Iterable[str]) -> str:
-        import json
-        return json.dumps(list(values), separators=(",", ":"))
-
-
-class OpportunityInterest(db.Model):
-    __tablename__ = "opportunity_interests"
-    __table_args__ = (
-        db.UniqueConstraint("user_id", "opportunity_id", name="uq_opportunity_interest_user_opportunity"),
+def admin_persistence_ready():
+    return all(
+        app.config[key]
+        for key in (
+            "ADMIN_PASSWORD",
+            "GITHUB_TOKEN",
+            "GITHUB_OWNER",
+            "GITHUB_REPO",
+            "GITHUB_BRANCH",
+            "GITHUB_CONTENT_ROOT",
+        )
     )
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    opportunity_id = db.Column(db.Integer, db.ForeignKey("opportunities.id"), nullable=False, index=True)
-    status = db.Column(db.String(32), nullable=False, default="interested", index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    user = db.relationship("User", back_populates="opportunity_interests")
-    opportunity = db.relationship("Opportunity", back_populates="interested_users")
-
-
-class Opportunity(db.Model):
-    __tablename__ = "opportunities"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    category = db.Column(db.String(80), nullable=False, default="General")
-    interests = db.Column(db.Text, nullable=False, default="[]")
-    difficulty = db.Column(db.String(32), nullable=False, default="Beginner")
-    estimated_hours_per_week = db.Column(db.Integer, nullable=False, default=4)
-    required_skills = db.Column(db.Text, nullable=False, default="[]")
-    status = db.Column(db.String(32), nullable=False, default="active", index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    interested_users = db.relationship("OpportunityInterest", back_populates="opportunity", cascade="all, delete-orphan")
-
-    @staticmethod
-    def _parse_json_list(raw_value: str | None) -> list[str]:
-        if not raw_value:
-            return []
-        try:
-            parsed = json.loads(raw_value)
-        except (TypeError, ValueError):
-            return [part.strip() for part in str(raw_value).split(",") if part.strip()]
-        if isinstance(parsed, list):
-            return [str(item).strip() for item in parsed if str(item).strip()]
-        return []
-
-    @property
-    def interests_list(self) -> list[str]:
-        return self._parse_json_list(self.interests)
-
-    @property
-    def required_skills_list(self) -> list[str]:
-        return self._parse_json_list(self.required_skills)
-
-    @staticmethod
-    def serialize_list(values: Iterable[str]) -> str:
-        return json.dumps(list(values), separators=(",", ":"))
+def remote_admin_login_limited():
+    now = time.time()
+    remote = request.remote_addr or "unknown"
+    attempts = [stamp for stamp in login_attempts.get(remote, []) if now - stamp < 300]
+    login_attempts[remote] = attempts
+    if len(attempts) >= 10:
+        return True
+    attempts.append(now)
+    return False
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(User, int(user_id))
-
-
-def get_user_interest_for_opportunity(user_id: int | None, opportunity_id: int) -> OpportunityInterest | None:
-    if not user_id:
-        return None
-    return OpportunityInterest.query.filter_by(user_id=user_id, opportunity_id=opportunity_id).first()
+@app.context_processor
+def inject_site_content():
+    try:
+        return {"site_content": content_repository.load("site")}
+    except ContentError:
+        return {"site_content": {"organization_name": "ADHAYAN", "tagline": "Learn deeply. Build what matters."}}
 
 
 @app.route("/")
 def home():
-    return render_template("landing.html", user=current_user)
+    try:
+        site = content_repository.load("site")
+        news = content_repository.featured_news()
+        opportunities = [item for item in content_repository.public_opportunities() if item["featured"]][:3]
+    except ContentError:
+        abort(503)
+    featured_ids = site.get("featured_news", [])
+    if site.get("featured_news_override", False):
+        news = [item for item in content_repository.public_news() if item["id"] in featured_ids]
+    home_sections = sorted(
+        (section for section in site["home_sections"] if section.get("active", True)),
+        key=lambda section: section["order"],
+    )
+    return render_template(
+        "public_home.html",
+        site=site,
+        home_sections=home_sections,
+        featured_news=news[:3],
+        featured_opportunities=opportunities,
+    )
 
 
-@app.route("/auth", methods=["GET", "POST"])
-@app.route("/auth/<string:mode>", methods=["GET", "POST"])
-def auth_page(mode=None):
-    if mode is None:
-        mode = request.args.get("mode", "signup")
-    mode = mode if mode in {"login", "signup"} else "signup"
-
-    if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        mode = request.form.get("mode", mode)
-        submitted_email = request.form.get("email", "").strip().lower()
-        if auth_rate_limited(mode, submitted_email):
-            flash("Too many attempts. Please wait a few minutes and try again.", "error")
-            return render_template("auth.html", mode=mode, user=current_user)
-
-        if mode == "login":
-            email = submitted_email
-            password = request.form.get("password", "")
-            user = User.query.filter_by(email=email).first()
-            if not user or not user.check_password(password):
-                flash("Invalid email or password.", "error")
-                return render_template("auth.html", mode="login", user=current_user)
-            login_user(user)
-            session.permanent = True
-            flash("Welcome back to ADHAYAN.", "success")
-            return redirect(url_for("dashboard"))
-
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        country = request.form.get("country", "").strip()
-        github_profile = request.form.get("github_profile", "").strip()
-        role = request.form.get("role", "").strip()
-        raw_interests = request.form.getlist("interests")
-        experience = request.form.get("experience", "").strip()
-        contribution = request.form.get("contribution", "").strip()
-        discord_username = request.form.get("discord_username", "").strip()
-        weekly_commitment = request.form.get("weekly_commitment", "").strip()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
-
-        errors = []
-        if not is_safe_text(full_name, minimum=2, maximum=120):
-            errors.append("Full name is required.")
-        if not is_valid_email(email):
-            errors.append("Please enter a valid email address.")
-        if not is_safe_text(country, maximum=120):
-            errors.append("Country is required.")
-        if not github_profile or not is_valid_github_url(github_profile):
-            errors.append("GitHub profile must be a valid GitHub URL.")
-        if role not in ALLOWED_ROLES:
-            errors.append("Please select a valid role.")
-        cleaned_interests = []
-        for item in raw_interests:
-            if item in ALLOWED_INTERESTS and item not in cleaned_interests:
-                cleaned_interests.append(item)
-        if len(cleaned_interests) == 0 or len(cleaned_interests) > 2:
-            errors.append("Select between 1 and 2 interest areas.")
-        if not is_safe_text(experience, minimum=10, maximum=4000):
-            errors.append("Please provide a brief relevant experience summary.")
-        if not is_safe_text(contribution, minimum=10, maximum=4000):
-            errors.append("Please tell us what you want to contribute or gain from ADHAYAN.")
-        if not is_valid_discord(discord_username):
-            errors.append("Discord username must contain only letters, numbers, underscores, periods, or dashes.")
-        if not validate_weekly_commitment(weekly_commitment):
-            errors.append("Weekly commitment must be a whole number between 1 and 40 hours.")
-        if len(password) < 8 or not re.search(r"[A-Z]", password) or not re.search(r"\d", password):
-            errors.append("Password must be at least 8 characters and include one uppercase letter and one number.")
-        if password != confirm_password:
-            errors.append("Passwords do not match.")
-        if User.query.filter_by(email=email).first():
-            errors.append("We could not create that account. Please review your details and try again.")
-
-        if errors:
-            for message in errors:
-                flash(message, "error")
-            return render_template("auth.html", mode="signup", user=current_user, form_data={
-                "full_name": full_name,
-                "email": email,
-                "country": country,
-                "github_profile": github_profile,
-                "role": role,
-                "interests": cleaned_interests,
-                "experience": experience,
-                "contribution": contribution,
-                "discord_username": discord_username,
-                "weekly_commitment": weekly_commitment,
-            })
-
-        user = User(
-            full_name=full_name,
-            email=email,
-            country=country,
-            github_profile=github_profile,
-            role=role,
-            interests=User.serialize_interests(cleaned_interests),
-            experience=experience,
-            contribution=contribution,
-            discord_username=discord_username,
-            weekly_commitment=int(weekly_commitment),
-        )
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        login_user(user)
-        session.permanent = True
-        flash("Account created successfully. Welcome to ADHAYAN.", "success")
-        return redirect(url_for("dashboard"))
-
-    return render_template("auth.html", mode=mode, user=current_user)
+@app.route("/about")
+def about():
+    try:
+        about_content = content_repository.load("about")
+        founders = content_repository.public_people("founders")
+        national_heads = content_repository.public_people("national_heads")
+    except ContentError:
+        abort(503)
+    heads_by_country = {}
+    for person in national_heads:
+        heads_by_country.setdefault(person["country"], []).append(person)
+    sections = sorted(
+        (section for section in about_content["sections"] if section.get("active", True)),
+        key=lambda section: section["order"],
+    )
+    return render_template(
+        "about.html",
+        about_content=about_content,
+        sections=sections,
+        founders=founders,
+        heads_by_country=heads_by_country,
+    )
 
 
-@app.route("/dashboard", methods=["GET", "POST"])
-@login_required
-def dashboard():
-    if request.method == "POST":
-        full_name = request.form.get("full_name", current_user.full_name).strip()
-        country = request.form.get("country", current_user.country).strip()
-        github_profile = request.form.get("github_profile", current_user.github_profile).strip()
-        role = request.form.get("role", current_user.role).strip()
-        raw_interests = request.form.getlist("interests")
-        experience = request.form.get("experience", current_user.experience).strip()
-        contribution = request.form.get("contribution", current_user.contribution).strip()
-        discord_username = request.form.get("discord_username", current_user.discord_username).strip()
-        weekly_commitment = request.form.get("weekly_commitment", str(current_user.weekly_commitment)).strip()
+@app.route("/news")
+def news_index():
+    try:
+        news = content_repository.public_news()
+    except ContentError:
+        abort(503)
+    return render_template("news.html", news=news)
 
-        errors = []
-        if not is_safe_text(full_name, minimum=2, maximum=120):
-            errors.append("Full name is required.")
-        if not is_safe_text(country, maximum=120):
-            errors.append("Country is required.")
-        if not github_profile or not is_valid_github_url(github_profile):
-            errors.append("GitHub profile must be a valid GitHub URL.")
-        if role not in ALLOWED_ROLES:
-            errors.append("Please select a valid role.")
-        cleaned_interests = [item for item in raw_interests if item in ALLOWED_INTERESTS]
-        if len(cleaned_interests) == 0 or len(cleaned_interests) > 2:
-            errors.append("Select between 1 and 2 interest areas.")
-        if not is_safe_text(experience, minimum=10, maximum=4000):
-            errors.append("Please provide a concise summary of relevant experience.")
-        if not is_safe_text(contribution, minimum=10, maximum=4000):
-            errors.append("Please provide an ADHAYAN contribution or goal statement.")
-        if not is_valid_discord(discord_username):
-            errors.append("Discord username must contain only letters, numbers, underscores, periods, or dashes.")
-        if not validate_weekly_commitment(weekly_commitment):
-            errors.append("Weekly commitment must be a whole number between 1 and 40 hours.")
 
-        my_opportunities = Opportunity.query.join(OpportunityInterest).filter(
-            OpportunityInterest.user_id == current_user.id,
-            OpportunityInterest.status == "interested",
-        ).order_by(OpportunityInterest.updated_at.desc()).all()
-
-        if errors:
-            for message in errors:
-                flash(message, "error")
-            return render_template("dashboard.html", user=current_user, form_data={
-                "full_name": full_name,
-                "country": country,
-                "github_profile": github_profile,
-                "role": role,
-                "interests": cleaned_interests,
-                "experience": experience,
-                "contribution": contribution,
-                "discord_username": discord_username,
-                "weekly_commitment": weekly_commitment,
-            }, featured_opportunities=Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all(), my_opportunities=my_opportunities)
-
-        current_user.full_name = full_name
-        current_user.country = country
-        current_user.github_profile = github_profile
-        current_user.role = role
-        current_user.interests = User.serialize_interests(cleaned_interests)
-        current_user.experience = experience
-        current_user.contribution = contribution
-        current_user.discord_username = discord_username
-        current_user.weekly_commitment = int(weekly_commitment)
-        db.session.commit()
-        flash("Profile updated successfully.", "success")
-
-    featured_opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc()).limit(3).all()
-    my_opportunities = Opportunity.query.join(OpportunityInterest).filter(
-        OpportunityInterest.user_id == current_user.id,
-        OpportunityInterest.status == "interested",
-    ).order_by(OpportunityInterest.updated_at.desc()).all()
-    return render_template("dashboard.html", user=current_user, form_data=current_user.profile, featured_opportunities=featured_opportunities, my_opportunities=my_opportunities)
+@app.route("/news/<string:slug>")
+def news_detail(slug):
+    try:
+        article = content_repository.public_news_item(slug)
+    except ContentError:
+        abort(503)
+    if article is None:
+        abort(404)
+    return render_template("news_detail.html", article=article)
 
 
 @app.route("/opportunities")
-@login_required
 def opportunities():
-    opportunities = Opportunity.query.filter_by(status="active").order_by(Opportunity.created_at.desc(), Opportunity.id.desc()).all()
-    interest_map = {opportunity.id: get_user_interest_for_opportunity(current_user.id, opportunity.id) for opportunity in opportunities}
-    return render_template("opportunities.html", user=current_user, opportunities=opportunities, interest_map=interest_map)
+    try:
+        items = content_repository.public_opportunities()
+    except ContentError:
+        abort(503)
+    return render_template("public_opportunities.html", opportunities=items)
 
 
-@app.route("/opportunities/<int:opportunity_id>")
-@login_required
-def opportunity_detail(opportunity_id):
-    opportunity = Opportunity.query.get_or_404(opportunity_id)
-    interest = get_user_interest_for_opportunity(current_user.id, opportunity.id)
-    return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity, interest=interest)
+@app.route("/opportunities/<string:slug>")
+def opportunity_detail(slug):
+    try:
+        opportunity = content_repository.public_opportunity(slug)
+    except ContentError:
+        abort(503)
+    if opportunity is None:
+        abort(404)
+    return render_template("public_opportunity_detail.html", opportunity=opportunity)
 
 
-@app.route("/opportunities/<int:opportunity_id>/interest", methods=["POST"])
-@login_required
-def express_interest(opportunity_id):
-    opportunity = Opportunity.query.get_or_404(opportunity_id)
-    if opportunity.status == "closed":
-        flash("This opportunity is closed and is no longer accepting new interest.", "error")
-        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if admin_authenticated():
+        return redirect(url_for("admin_dashboard"))
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        username_valid = hmac.compare_digest(
+            username.encode("utf-8"), app.config["ADMIN_USERNAME"].encode("utf-8")
+        )
+        configured_password = app.config["ADMIN_PASSWORD"]
+        password_valid = bool(configured_password) and hmac.compare_digest(
+            password.encode("utf-8"), configured_password.encode("utf-8")
+        )
+        rate_limited = remote_admin_login_limited()
+        if username_valid and password_valid and not rate_limited:
+            session.clear()
+            session.permanent = True
+            session["_adh_admin_authenticated"] = True
+            session["_adh_admin_logged_in_at"] = int(time.time())
+            login_attempts.pop(request.remote_addr or "unknown", None)
+            return redirect(url_for("admin_dashboard"))
+        flash("Unable to sign in with those credentials. Please try again.", "error")
+    return render_template("admin_login.html")
 
-    interest = OpportunityInterest.query.filter_by(user_id=current_user.id, opportunity_id=opportunity.id).first()
-    if interest and interest.status == "interested":
-        flash("You already expressed interest in this opportunity.", "info")
-        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
 
-    if interest is None:
-        interest = OpportunityInterest(user_id=current_user.id, opportunity_id=opportunity.id, status="interested")
-        db.session.add(interest)
+@app.route("/admin/logout", methods=["POST"])
+@admin_required
+def admin_logout():
+    session.clear()
+    flash("You have been signed out of the admin area.", "success")
+    return redirect(url_for("admin_login"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    counts = {}
+    for name in ADMIN_COLLECTIONS:
+        try:
+            records = content_repository.load(name)
+            counts[name] = len(records)
+        except ContentError as error:
+            counts[name] = None
+    return render_template(
+        "admin_dashboard.html",
+        documents=ADMIN_COLLECTIONS,
+        counts=counts,
+        persistence_ready=admin_persistence_ready(),
+    )
+
+
+def _error_for_admin(error):
+    app.logger.error("Admin content operation failed: %s", type(error).__name__)
+    if isinstance(error, ContentValidationError):
+        return str(error)
+    if isinstance(error, ContentError):
+        return str(error)
+    if isinstance(error, GitHubContentError):
+        return str(error)
+    return "The content change could not be saved. No changes were applied."
+
+
+def _load_admin_collection(collection):
+    if collection not in COLLECTIONS:
+        abort(404)
+    try:
+        return content_repository.list_records(collection)
+    except ContentError:
+        flash("This content collection is temporarily unavailable.", "error")
+        return []
+
+
+def _list_endpoint(collection):
+    return {
+        "news": "admin_news",
+        "opportunities": "admin_opportunities",
+        "founders": "admin_founders",
+        "national_heads": "admin_national_heads",
+    }[collection]
+
+
+def _form_values(collection):
+    values = {"id": request.form.get("slug", "").strip().lower(), "order": request.form.get("order", "10").strip()}
+    if collection == "news":
+        values.update({
+            "title": request.form.get("title", "").strip(),
+            "summary": request.form.get("summary", "").strip(),
+            "body": request.form.get("body", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "published_at": request.form.get("published_at", "").strip(),
+            "byline": request.form.get("byline", "").strip(),
+            "image_url": request.form.get("image_url", "").strip(),
+            "image_alt": request.form.get("image_alt", "").strip(),
+            "published": request.form.get("published") == "on",
+        })
+    elif collection == "opportunities":
+        values.update({
+            "title": request.form.get("title", "").strip(),
+            "description": request.form.get("description", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "topics": [part.strip() for part in re.split(r"[,\n]", request.form.get("topics", "")) if part.strip()],
+            "difficulty": request.form.get("difficulty", "").strip(),
+            "weekly_hours": request.form.get("weekly_hours", "0").strip(),
+            "skills": [part.strip() for part in re.split(r"[,\n]", request.form.get("skills", "")) if part.strip()],
+            "image_url": request.form.get("image_url", "").strip(),
+            "image_alt": request.form.get("image_alt", "").strip(),
+            "published": request.form.get("published") == "on",
+            "closed": request.form.get("closed") == "on",
+            "featured": request.form.get("featured") == "on",
+        })
     else:
-        interest.status = "interested"
-        interest.updated_at = datetime.now(timezone.utc)
+        values.update({
+            "name": request.form.get("name", "").strip(),
+            "role": request.form.get("role", "").strip(),
+            "bio": request.form.get("bio", "").strip(),
+            "portrait_url": request.form.get("portrait_url", "").strip(),
+            "active": request.form.get("active") == "on",
+        })
+        if collection == "national_heads":
+            values["country"] = request.form.get("country", "").strip()
 
     try:
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-        flash("This opportunity is already linked to your account. Please review your current interests.", "error")
-        return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
-
-    flash("Your interest has been recorded.", "success")
-    return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+        values["order"] = int(values["order"])
+        if collection == "opportunities":
+            values["weekly_hours"] = int(values["weekly_hours"])
+    except ValueError:
+        raise ContentValidationError("Order and weekly hours must be whole numbers.") from None
+    return values
 
 
-@app.route("/opportunities/<int:opportunity_id>/interest/withdraw", methods=["POST"])
-@login_required
-def withdraw_interest(opportunity_id):
-    opportunity = Opportunity.query.get_or_404(opportunity_id)
-    interest = OpportunityInterest.query.filter_by(user_id=current_user.id, opportunity_id=opportunity.id).first()
-    if interest is None or interest.status != "interested":
-        flash("You do not have an active interest in this opportunity.", "error")
-        return render_template("opportunity_detail.html", user=current_user, opportunity=opportunity, interest=interest)
+def _submitted_form_values(collection):
+    values = request.form.to_dict()
+    values["id"] = request.form.get("slug", "")
+    values["order"] = request.form.get("order", "")
+    if collection == "opportunities":
+        values["topics"] = [part.strip() for part in re.split(r"[,\n]", request.form.get("topics", "")) if part.strip()]
+        values["skills"] = [part.strip() for part in re.split(r"[,\n]", request.form.get("skills", "")) if part.strip()]
+    for checkbox in ("published", "featured", "closed", "active"):
+        if checkbox in values:
+            values[checkbox] = True
+        else:
+            values[checkbox] = False
+    return values
 
-    interest.status = "withdrawn"
-    interest.updated_at = datetime.now(timezone.utc)
-    db.session.commit()
-    flash("Your interest in this opportunity has been withdrawn.", "success")
-    return redirect(url_for("opportunity_detail", opportunity_id=opportunity.id))
+
+def _render_record_form(collection, record_id=None):
+    if collection not in COLLECTIONS:
+        abort(404)
+    records = content_repository.list_records(collection)
+    original = None
+    if record_id is not None:
+        original = next((record for record in records if record["id"] == record_id), None)
+        if original is None:
+            abort(404)
+
+    values = dict(original or {"order": (len(records) + 1) * 10})
+    errors = []
+    if request.method == "POST":
+        try:
+            values = _form_values(collection)
+            content_repository.save_record(
+                collection,
+                values,
+                f"{'Update' if original else 'Add'} ADHAYAN {collection} record",
+                current_id=record_id,
+            )
+        except (ContentError, GitHubContentError) as error:
+            values = _submitted_form_values(collection)
+            errors.append(_error_for_admin(error))
+        else:
+            flash(f"{ADMIN_COLLECTIONS[collection]} saved successfully.", "success")
+            return redirect(url_for(_list_endpoint(collection)))
+
+    return render_template(
+        "admin_record_form.html",
+        collection=collection,
+        label=ADMIN_COLLECTIONS[collection],
+        values=values,
+        errors=errors,
+        editing=original is not None,
+        persistence_ready=admin_persistence_ready(),
+    ), 400 if errors else 200
 
 
-@app.route("/logout", methods=["POST"])
-def logout():
-    logout_user()
-    session.clear()
-    flash("You have been signed out.", "success")
-    return redirect(url_for("auth_page"))
+def _delete_record(collection, record_id):
+    if collection not in COLLECTIONS:
+        abort(404)
+    records = content_repository.list_records(collection)
+    record = next((item for item in records if item["id"] == record_id), None)
+    if record is None:
+        abort(404)
+    if request.method == "POST":
+        try:
+            content_repository.delete_record(collection, record_id, f"Delete ADHAYAN {collection} record {record_id}")
+        except (ContentError, GitHubContentError) as error:
+            flash(f"Delete failed: {_error_for_admin(error)}", "error")
+            return redirect(url_for(_list_endpoint(collection)))
+        flash(f"{ADMIN_COLLECTIONS[collection]} item deleted.", "success")
+        return redirect(url_for(_list_endpoint(collection)))
+    return render_template(
+        "admin_delete_confirm.html",
+        label=ADMIN_COLLECTIONS[collection],
+        record=record,
+        collection=collection,
+        persistence_ready=admin_persistence_ready(),
+    )
+
+
+@app.route("/admin/site", methods=["GET", "POST"])
+@admin_required
+def admin_site():
+    values = content_repository.load("site")
+    errors = []
+    published_news = [item for item in content_repository.load("news") if item["published"]]
+    if not values.get("featured_news_override", False):
+        values["featured_news"] = [item["id"] for item in published_news if item.get("featured", False)]
+    if request.method == "POST":
+        values = dict(values)
+        for field in (
+            "organization_name", "tagline", "hero_title", "hero_eyebrow", "intro",
+            "hero_about_label", "hero_opportunities_label", "nav_cta_label",
+            "about_page_eyebrow", "news_page_eyebrow", "opportunities_page_eyebrow",
+            "news_section_eyebrow",
+            "news_section_title", "news_all_label", "news_page_title", "news_page_intro",
+            "news_empty_message", "news_read_label", "news_home_read_label", "home_news_empty_message",
+            "news_detail_back_label", "featured_opportunities_eyebrow",
+            "featured_opportunities_title", "featured_opportunities_all_label",
+            "pathways_eyebrow", "pathways_heading", "pathways_link_label",
+            "opportunities_page_title", "opportunities_page_intro", "opportunities_empty_message",
+            "opportunity_more_info_label", "opportunity_open_label", "opportunity_closed_label",
+            "opportunity_detail_back_label", "opportunity_difficulty_label",
+            "opportunity_expected_time_label", "opportunity_skills_label", "weekly_hours_suffix",
+            "about_people_count_label", "about_countries_count_label",
+        ):
+            values[field] = request.form.get(field, "").strip()
+        values["journey_steps"] = [line.strip() for line in request.form.get("journey_steps", "").splitlines() if line.strip()]
+        values["featured_news"] = request.form.getlist("featured_news")
+        values["featured_news_override"] = True
+        nav = []
+        for page, default_label in (("about", "About"), ("opportunities", "Initiatives"), ("news", "News")):
+            label = request.form.get(f"nav_{page}", default_label).strip()
+            if label:
+                nav.append({"page": page, "label": label})
+        values["navigation"] = nav
+        try:
+            valid_news_ids = {item["id"] for item in published_news}
+            if any(item not in valid_news_ids for item in values["featured_news"]):
+                raise ContentValidationError("Featured news must refer to currently published articles.")
+            content_repository.save("site", values, "Update ADHAYAN homepage and site settings")
+        except (ContentError, GitHubContentError) as error:
+            errors.append(_error_for_admin(error))
+        else:
+            flash("Homepage and site settings saved.", "success")
+            return redirect(url_for("admin_site"))
+    return render_template(
+        "admin_site_form.html",
+        values=values,
+        published_news=published_news,
+        errors=errors,
+        persistence_ready=admin_persistence_ready(),
+    ), 400 if errors else 200
+
+
+@app.route("/admin/about", methods=["GET", "POST"])
+@admin_required
+def admin_about():
+    values = content_repository.load("about")
+    errors = []
+    if request.method == "POST":
+        values = dict(values)
+        for field in (
+            "title", "intro", "founders_heading", "founders_eyebrow", "founders_empty_message",
+            "national_heads_heading", "national_heads_eyebrow", "national_heads_empty_message",
+        ):
+            values[field] = request.form.get(field, "").strip()
+        try:
+            content_repository.save("about", values, "Update ADHAYAN About page")
+        except (ContentError, GitHubContentError) as error:
+            errors.append(_error_for_admin(error))
+        else:
+            flash("About page copy saved.", "success")
+            return redirect(url_for("admin_about"))
+    sections = sorted(values.get("sections", []), key=lambda section: section.get("order", 0))
+    return render_template("admin_about_form.html", values=values, sections=sections, errors=errors,
+                           persistence_ready=admin_persistence_ready()), 400 if errors else 200
+
+
+def _section_form(document, record_id=None):
+    if document not in {"site", "about"}:
+        abort(404)
+    key = "home_sections" if document == "site" else "sections"
+    values = content_repository.load(document)
+    sections = values[key]
+    existing = next((item for item in sections if item["id"] == record_id), None) if record_id else None
+    if record_id and existing is None:
+        abort(404)
+    section = dict(existing or {"order": (len(sections) + 1) * 10, "active": True, "eyebrow": "", "link_page": "", "link_label": ""})
+    errors = []
+    if request.method == "POST":
+        section = {
+            "id": request.form.get("slug", "").strip().lower(),
+            "eyebrow": request.form.get("eyebrow", "").strip(),
+            "heading": request.form.get("heading", "").strip(),
+            "body": request.form.get("body", "").strip(),
+            "order": request.form.get("order", "10").strip(),
+            "active": request.form.get("active") == "on",
+            "link_page": request.form.get("link_page", "").strip(),
+            "link_label": request.form.get("link_label", "").strip(),
+        }
+        try:
+            section["order"] = int(section["order"])
+            updated_sections = [item for item in sections if item["id"] != record_id]
+            if any(item["id"] == section["id"] for item in updated_sections):
+                raise ContentValidationError("A section with this slug already exists.")
+            updated_sections.append(section)
+            values[key] = updated_sections
+            content_repository.save(document, values, f"Update ADHAYAN {document} section")
+        except (ValueError, ContentError, GitHubContentError) as error:
+            errors.append("Order must be a whole number." if isinstance(error, ValueError) else _error_for_admin(error))
+        else:
+            flash("Section saved successfully.", "success")
+            return redirect(url_for("admin_about" if document == "about" else "admin_site"))
+    return render_template("admin_section_form.html", document=document, section=section, editing=existing is not None,
+                           errors=errors, persistence_ready=admin_persistence_ready()), 400 if errors else 200
+
+
+def _delete_section(document, record_id):
+    if document not in {"site", "about"}:
+        abort(404)
+    key = "home_sections" if document == "site" else "sections"
+    values = content_repository.load(document)
+    section = next((item for item in values[key] if item["id"] == record_id), None)
+    if section is None:
+        abort(404)
+    if request.method == "POST":
+        values[key] = [item for item in values[key] if item["id"] != record_id]
+        try:
+            content_repository.save(document, values, f"Delete ADHAYAN {document} section")
+        except (ContentError, GitHubContentError) as error:
+            flash(f"Delete failed: {_error_for_admin(error)}", "error")
+        else:
+            flash("Section deleted.", "success")
+        return redirect(url_for("admin_about" if document == "about" else "admin_site"))
+    return render_template("admin_delete_confirm.html", label="section", record=section, collection=document,
+                           persistence_ready=admin_persistence_ready(), section=True)
+
+
+@app.route("/admin/news")
+@admin_required
+def admin_news():
+    try:
+        site = content_repository.load("site")
+        featured_ids = site.get("featured_news", [])
+        if not site.get("featured_news_override", False):
+            featured_ids = [item["id"] for item in content_repository.load("news") if item.get("featured")]
+    except ContentError:
+        featured_ids = []
+    return render_template("admin_collection.html", name="news", label=ADMIN_COLLECTIONS["news"],
+                           records=_load_admin_collection("news"), featured_ids=featured_ids,
+                           persistence_ready=admin_persistence_ready())
+
+
+@app.route("/admin/news/featured", methods=["POST"])
+@admin_required
+def admin_news_featured():
+    try:
+        site = content_repository.load("site")
+        published_ids = {item["id"] for item in content_repository.load("news") if item["published"]}
+        selected_ids = request.form.getlist("featured_news")
+        if any(identifier not in published_ids for identifier in selected_ids):
+            raise ContentValidationError("Only published news articles can be featured.")
+        site["featured_news"] = selected_ids
+        site["featured_news_override"] = True
+        content_repository.save("site", site, "Update ADHAYAN featured news selection")
+    except (ContentError, GitHubContentError) as error:
+        flash(f"Featured news was not saved: {_error_for_admin(error)}", "error")
+    else:
+        flash("Featured news selection saved.", "success")
+    return redirect(url_for("admin_news"))
+
+
+@app.route("/admin/opportunities")
+@admin_required
+def admin_opportunities():
+    return render_template("admin_collection.html", name="opportunities", label=ADMIN_COLLECTIONS["opportunities"],
+                           records=_load_admin_collection("opportunities"), persistence_ready=admin_persistence_ready())
+
+
+@app.route("/admin/founders")
+@admin_required
+def admin_founders():
+    return render_template("admin_collection.html", name="founders", label=ADMIN_COLLECTIONS["founders"],
+                           records=_load_admin_collection("founders"), persistence_ready=admin_persistence_ready())
+
+
+@app.route("/admin/national-heads")
+@admin_required
+def admin_national_heads():
+    return render_template("admin_collection.html", name="national_heads", label=ADMIN_COLLECTIONS["national_heads"],
+                           records=_load_admin_collection("national_heads"), persistence_ready=admin_persistence_ready())
+
+
+@app.route("/admin/<string:collection>/new", methods=["GET", "POST"])
+@admin_required
+def admin_record_new(collection):
+    return _render_record_form(collection)
+
+
+@app.route("/admin/<string:collection>/<string:record_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_record_edit(collection, record_id):
+    return _render_record_form(collection, record_id)
+
+
+@app.route("/admin/<string:collection>/<string:record_id>/delete", methods=["GET", "POST"])
+@admin_required
+def admin_record_delete(collection, record_id):
+    return _delete_record(collection, record_id)
+
+
+@app.route("/admin/<string:document>/sections/new", methods=["GET", "POST"])
+@admin_required
+def admin_section_new(document):
+    return _section_form(document)
+
+
+@app.route("/admin/<string:document>/sections/<string:record_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_section_edit(document, record_id):
+    return _section_form(document, record_id)
+
+
+@app.route("/admin/<string:document>/sections/<string:record_id>/delete", methods=["GET", "POST"])
+@admin_required
+def admin_section_delete(document, record_id):
+    return _delete_section(document, record_id)
+
+
+@app.route("/admin/settings")
+@admin_required
+def admin_settings():
+    return render_template(
+        "admin_settings.html",
+        persistence_ready=admin_persistence_ready(),
+        github_owner=app.config["GITHUB_OWNER"],
+        github_repo=app.config["GITHUB_REPO"],
+        github_branch=app.config["GITHUB_BRANCH"],
+        content_root=app.config["GITHUB_CONTENT_ROOT"],
+    )
 
 
 @app.before_request
-def ensure_database_ready():
-    if app.config["APP_ENV"] == "development" and not app.config.get("TESTING"):
-        db.create_all()
+def enforce_admin_session_lifetime():
+    logged_in_at = session.get("_adh_admin_logged_in_at")
+    lifetime = app.permanent_session_lifetime.total_seconds()
+    if logged_in_at is not None and time.time() - logged_in_at > lifetime:
+        session.clear()
 
 
 @app.after_request
 def add_security_headers(response):
-    response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://picsum.photos; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; "
+        "img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'none'; "
+        "base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
+    )
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -558,9 +693,11 @@ def handle_csrf_error(error):
     return render_template("error.html", code=400, message="The form security token is invalid or missing."), 400
 
 
-@app.errorhandler(400)
-def handle_bad_request(error):
-    return render_template("error.html", code=400, message="The request could not be processed."), 400
+@app.errorhandler(ContentError)
+@app.errorhandler(GitHubContentError)
+def handle_content_unavailable(error):
+    app.logger.error("Content operation failed: %s", type(error).__name__)
+    return render_template("error.html", code=503, message="ADHAYAN content is temporarily unavailable."), 503
 
 
 @app.errorhandler(404)
@@ -568,14 +705,18 @@ def handle_not_found(error):
     return render_template("error.html", code=404, message="The page you requested does not exist."), 404
 
 
-@app.errorhandler(405)
-def handle_method_not_allowed(error):
-    return render_template("error.html", code=405, message="That method is not available here."), 405
+@app.errorhandler(400)
+def handle_bad_request(error):
+    return render_template("error.html", code=400, message="The request could not be processed."), 400
+
+
+@app.errorhandler(503)
+def handle_service_unavailable(error):
+    return render_template("error.html", code=503, message="ADHAYAN content is temporarily unavailable."), 503
 
 
 @app.errorhandler(500)
 def handle_server_error(error):
-    db.session.rollback()
     app.logger.exception("Unhandled application error")
     return render_template("error.html", code=500, message="ADHAYAN could not complete that request."), 500
 

@@ -1,0 +1,5 @@
+{% extends 'layout.html' %}
+{% block title %}Admin sign in | ADHAYAN{% endblock %}
+{% block content %}
+<main class="page-wrap admin-page"><section class="admin-login"><p class="eyebrow">ADHAYAN / ADMIN</p><h1>Administrator sign in</h1><p>Use the configured administrator credentials to manage published site content.</p><form method="post" class="admin-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="field"><span>Username</span><input name="username" autocomplete="username" required></label><label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button-primary" type="submit">Sign in</button></form></section></main>
+{% endblock %}
