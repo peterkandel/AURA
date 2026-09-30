@@ -11,10 +11,14 @@
         <div class="hero-links"><a class="button-primary" href="{{ url_for('about') }}">{{ site.hero_about_label }} <span aria-hidden="true">↗</span></a><a class="text-link" href="{{ url_for('opportunities') }}">{{ site.hero_opportunities_label }} <span aria-hidden="true">→</span></a></div>
         <div class="hero-signature"><span class="signature-rule"></span><p>{{ site.tagline }}</p></div>
       </div>
-      <aside class="hero-journey" aria-label="{{ site.journey_steps|join(' to ') }}">
-        <span class="journey-index" aria-hidden="true">A.</span>
-        <ol>{% for step in site.journey_steps %}<li><span class="journey-number">0{{ loop.index }}</span><span>{{ step }}</span></li>{% endfor %}</ol>
-      </aside>
+      <div class="hero-journey-stage">
+        <span class="hero-plane hero-plane--saffron" aria-hidden="true"></span>
+        <span class="hero-plane hero-plane--lilac" aria-hidden="true"></span>
+        <aside class="hero-journey" aria-label="{{ site.journey_steps|join(' to ') }}">
+          <img class="journey-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024">
+          <ol>{% for step in site.journey_steps %}<li><span class="journey-number">{{ '%02d'|format(loop.index) }}</span><span>{{ step }}</span></li>{% endfor %}</ol>
+        </aside>
+      </div>
     </div>
   </section>
 
@@ -23,9 +27,9 @@
   <section class="home-news page-wrap">
     <header class="editorial-section-head"><div><p class="eyebrow">{{ site.news_section_eyebrow }}</p><h2>{{ site.news_section_title }}</h2></div><a class="text-link" href="{{ url_for('news_index') }}">{{ site.news_all_label }} <span aria-hidden="true">↗</span></a></header>
     {% if featured_news %}{% set lead = featured_news[0] %}
-      <div class="home-news-layout">
+      <div class="home-news-layout{% if featured_news|length == 1 %} home-news-layout--single{% endif %}">
         <article class="home-news-lead">
-          {% if lead.image_url %}<a class="home-news-art" href="{{ url_for('news_detail', slug=lead.id) }}"><img src="{{ lead.image_url }}" alt="{{ lead.image_alt|default(lead.title) }}" loading="lazy"><span class="art-index">FEATURED / 01</span></a>{% else %}<a class="home-news-art home-news-art--type" href="{{ url_for('news_detail', slug=lead.id) }}"><span class="art-index">FEATURED / 01</span><span class="art-letter" aria-hidden="true">N</span><span class="art-category">{{ lead.category }}</span></a>{% endif %}
+          {% if lead.image_url %}<a class="home-news-art" href="{{ url_for('news_detail', slug=lead.id) }}"><img src="{{ lead.image_url }}" alt="{{ lead.image_alt|default(lead.title) }}" loading="lazy"><span class="art-index">FEATURED / 01</span></a>{% else %}<a class="home-news-art home-news-art--type" href="{{ url_for('news_detail', slug=lead.id) }}"><span class="art-index">FEATURED / 01</span><img class="fallback-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="ADHAYAN logo" width="1024" height="1024" loading="lazy"><span class="art-category">{{ lead.category }}</span></a>{% endif %}
           <div class="home-news-lead-copy"><div class="news-meta"><span>{{ lead.category }}</span><time datetime="{{ lead.published_at }}">{{ lead.published_at }}</time><span>{{ lead.byline }}</span></div><h3><a href="{{ url_for('news_detail', slug=lead.id) }}">{{ lead.title }}</a></h3><p>{{ lead.summary }}</p><a class="text-link" href="{{ url_for('news_detail', slug=lead.id) }}">{{ site.news_home_read_label }} <span aria-hidden="true">↗</span></a></div>
         </article>
         <div class="home-news-support" aria-label="More selected stories">{% for article in featured_news[1:] %}<article class="home-news-brief"><div class="brief-count">0{{ loop.index + 1 }}</div><div class="brief-copy"><div class="news-meta"><span>{{ article.category }}</span><time datetime="{{ article.published_at }}">{{ article.published_at }}</time></div><h3><a href="{{ url_for('news_detail', slug=article.id) }}">{{ article.title }}</a></h3><p>{{ article.summary }}</p><a class="text-link" href="{{ url_for('news_detail', slug=article.id) }}">{{ site.news_home_read_label }} ↗</a></div></article>{% endfor %}</div>

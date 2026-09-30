@@ -4,7 +4,7 @@
 <main class="article-page">
   <header class="article-hero page-wrap"><a class="text-link article-back" href="{{ url_for('news_index') }}">← {{ site_content.news_detail_back_label }}</a><div class="article-hero-meta"><p class="eyebrow">{{ article.category }}</p><span class="folio-mark">{{ article.published_at }}</span></div><h1>{{ article.title }}</h1><p class="article-deck">{{ article.summary }}</p><div class="article-byline"><span>{{ article.byline }}</span><time datetime="{{ article.published_at }}">{{ article.published_at }}</time></div></header>
   {% if article.image_url %}<figure class="article-visual page-wrap"><img src="{{ article.image_url }}" alt="{{ article.image_alt|default(article.title) }}" loading="lazy"><figcaption>{{ article.image_alt|default(article.title) }}</figcaption></figure>{% endif %}
-  <article class="article-reading page-wrap"><div class="article-reading-marker"><span aria-hidden="true">A</span><span class="eyebrow">ADHAYAN / JOURNAL</span></div><div class="article-body">{{ article.body }}</div></article>
+  <article class="article-reading page-wrap"><div class="article-reading-marker"><img class="reading-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024" loading="lazy"><span class="eyebrow">ADHAYAN / JOURNAL</span></div><div class="article-body">{{ article.body }}</div></article>
   <footer class="article-end page-wrap"><span class="end-rule"></span><a class="text-link" href="{{ url_for('news_index') }}">← {{ site_content.news_detail_back_label }}</a></footer>
 </main>
 {% endblock %}

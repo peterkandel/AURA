@@ -3,18 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Run before styles paint; storage can be blocked by browser privacy settings.
+    try {
+      if (localStorage.getItem('adhayan-theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    } catch (_) { /* The default light theme remains usable. */ }
+  </script>
   <title>{% block title %}{{ site_content.organization_name|default('ADHAYAN') }}{% endblock %}</title>
   <meta name="description" content="{{ site_content.tagline|default('Learn deeply. Build what matters.') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='adhayan-logo.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Serif+Display&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
 </head>
 <body>
-  <div class="background-grid" aria-hidden="true"></div>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar"><div class="topbar-inner">
-    <a href="{{ url_for('home') }}" class="brand-mark"><span class="brand-icon" aria-hidden="true"></span><span>{{ site_content.organization_name }}</span></a>
+    <a href="{{ url_for('home') }}" class="brand-mark"><img class="brand-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024"><span>{{ site_content.organization_name }}</span></a>
     <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">Menu</button>
+    <button class="theme-toggle" type="button" aria-pressed="false" hidden>Dark mode</button>
     <nav class="main-nav" id="primary-nav" aria-label="Main navigation">
       {% for item in site_content.navigation %}
         {% if item.page == 'about' %}<a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}is-active{% endif %}" {% if request.endpoint == 'about' %}aria-current="page"{% endif %}>{{ item.label }}</a>
@@ -25,18 +35,44 @@
     <a class="nav-cta" href="{{ url_for('news_index') }}">{{ site_content.nav_cta_label }}</a>
   </div></header>
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash flash--{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
-  {% block content %}{% endblock %}
+  <div id="main-content" tabindex="-1">{% block content %}{% endblock %}</div>
   <footer class="site-footer"><div class="footer-inner">
-    <a class="brand-mark" href="{{ url_for('home') }}"><span class="brand-icon" aria-hidden="true"></span><span>{{ site_content.organization_name }}</span></a><p>{{ site_content.tagline|default('Learn deeply. Build what matters.') }}</p>
+    <a class="brand-mark" href="{{ url_for('home') }}"><img class="brand-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024"><span>{{ site_content.organization_name }}</span></a><p>{{ site_content.tagline|default('Learn deeply. Build what matters.') }}</p>
     <div class="footer-links">{% for item in site_content.navigation %}{% if item.page == 'about' %}<a href="{{ url_for('about') }}">{{ item.label }}</a>{% elif item.page == 'opportunities' %}<a href="{{ url_for('opportunities') }}">{{ item.label }}</a>{% elif item.page == 'news' %}<a href="{{ url_for('news_index') }}">{{ item.label }}</a>{% endif %}{% endfor %}<a href="{{ url_for('admin_login') }}">Admin</a></div>
   </div></footer>
   <script>
+    const themeButton = document.querySelector('.theme-toggle');
+    const syncThemeButton = () => {
+      themeButton.setAttribute('aria-pressed', String(document.documentElement.dataset.theme === 'dark'));
+    };
+    syncThemeButton();
+    themeButton.hidden = false;
+    themeButton.addEventListener('click', () => {
+      const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = theme;
+      syncThemeButton();
+      try { localStorage.setItem('adhayan-theme', theme); } catch (_) { /* Still works for this page. */ }
+    });
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'adhayan-theme' || event.key === null) {
+        document.documentElement.dataset.theme = event.newValue === 'dark' ? 'dark' : 'light';
+        syncThemeButton();
+      }
+    });
     const menuButton = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('#primary-nav');
+    menuButton?.closest('.topbar').classList.add('nav-enhanced');
     menuButton?.addEventListener('click', () => {
       const expanded = menuButton.getAttribute('aria-expanded') === 'true';
       menuButton.setAttribute('aria-expanded', String(!expanded));
+      menuButton.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
       nav.classList.toggle('is-open', !expanded);
+    });
+    nav?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menuButton.getAttribute('aria-expanded') === 'true') {
+        menuButton.click();
+        menuButton.focus();
+      }
     });
   </script>
 </body>
