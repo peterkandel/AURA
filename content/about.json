@@ -1,7 +1,22 @@
 {
   "title": "About ADHAYAN",
   "intro": "ADHAYAN's organizational introduction will be published here.",
-  "sections": [],
+  "sections": [
+    {
+      "id": "event",
+      "eyebrow": "EVENTS & EXPERIENCES",
+      "heading": "Learn. Connect. Experience.",
+      "body": "From workshops and talks to competitions and community gatherings, ADHAYAN brings young minds together to learn, exchange ideas, and create meaningful experiences beyond the classroom.",
+      "order": 10,
+      "active": true,
+      "link_page": "",
+      "link_label": "Explore Events"
+    }
+  ],
   "founders_heading": "Founders",
-  "national_heads_heading": "National heads"
+  "founders_eyebrow": "The people who began it",
+  "national_heads_heading": "National heads",
+  "national_heads_eyebrow": "Across our communities",
+  "founders_empty_message": "Founder information will be published here.",
+  "national_heads_empty_message": "National head information will be published here."
 }
