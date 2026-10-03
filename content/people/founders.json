@@ -25,5 +25,14 @@
     "bio": "🇧🇩 Country: Bangladesh\r\n📍 Location: Mymensingh, Bangladesh\r\n🤖 Focus: AI, Machine Learning, Software Engineering\r\n🏆 APOAI 2026: Gold Medal — Rank 5\r\n🥉 IOAI 2026: Bronze Medal — Rank 161\r\n🇧🇩 IOAI: Bangladesh national-team delegate\r\n💻 BdAIO 2025: National camper; Rank 7 in national round\r\n🧑‍💻 BOI 2025: National contestant\r\n🚀 Entrepreneurship: Co-Founder/CEO/CTO, Dead Mans Tech\r\n🔬 Technical interests: ML, data science, AI engineering, web/mobile/backend development",
     "portrait_url": "https://i.postimg.cc/MKpxLPn9/Bangladesh.jpg",
     "active": true
+  },
+  {
+    "id": "andri-bilan",
+    "order": 40,
+    "name": "Andrii Bilan",
+    "role": "Co-Founder",
+    "bio": "🇺🇦 Country: Ukraine\r\n🏫 School: Lyceum No. 19 “Mezhyhirskyi”\r\n🎓 Grade: 9th grade\r\n💻 Focus: Programming, AI, computer technology\r\n🤖 IOAI 2026: Honourable Mention\r\n📊 IOAI 2026 rank: 248th\r\n🥉 Infomatrix 2026: Bronze Medal\r\n🧑‍💻 Codeforces: Andrii_Bilan\r\n🧑‍💻 E-Olymp: andriy_bilan",
+    "portrait_url": "https://i.postimg.cc/9083V2Db/Ukraine.jpg",
+    "active": true
   }
 ]
