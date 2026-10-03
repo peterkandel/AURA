@@ -7,5 +7,14 @@
     "bio": "Field: Mathematics • Artificial Intelligence • Machine Learning • Computational competitions\r\nCountry: Peru 🇵🇪\r\nSchool: Saco Oliveros, Lima\r\nNotable achievements:\r\n- 🥇 1st, 2022 Torneo de Jóvenes Matemáticos — national 1st-secondary category\r\n- 🥈 2nd, OPEIA 2026 — Peru's AI Olympiad\r\n- 🥉 2025 Iranian Geometry Olympiad — Advanced category\r\n- 🇵🇪 Peru representative at IOAI 2026\r\n- 🏅 IOAI 2026 Honourable Mention",
     "portrait_url": "https://i.postimg.cc/0QzDZdpM/PERU.jpg",
     "active": true
+  },
+  {
+    "id": "ayan-zeeshan",
+    "order": 20,
+    "name": "Ayan Zeeshan",
+    "role": "Co-Founder",
+    "bio": "🇵🇰 Country: Pakistan\r\n🏫 School: Aitchison College, Lahore\r\n🤖 Field: Artificial Intelligence / computational problem-solving\r\n🌎 International competition: IOAI 2026\r\n🏅 Result: Honourable Mention\r\n📊 IOAI rank: 222nd\r\n🏛️ National team: Pakistan, 2026\r\n🧠 Training: 3-week intensive AI training camp at PIEAS",
+    "portrait_url": "https://i.postimg.cc/4NW4NCDD/Pakistan.jpg",
+    "active": true
   }
 ]
