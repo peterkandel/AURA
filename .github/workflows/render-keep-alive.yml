@@ -1,0 +1,23 @@
+name: Keep Render service awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    name: Ping Render health endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send health request
+        env:
+          RENDER_SERVICE_URL: https://adhyayan-wdvz.onrender.com
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_SERVICE_URL:-}" ]; then
+            echo "::error::Repository variable RENDER_SERVICE_URL is not configured."
+            exit 1
+          fi
+          curl --fail --silent --show-error --output /dev/null --max-time 120 --retry 2 --retry-delay 5 "${RENDER_SERVICE_URL%/}/health"

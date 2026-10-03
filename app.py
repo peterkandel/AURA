@@ -148,6 +148,11 @@ def home():
     )
 
 
+@app.route("/health")
+def health():
+    return "OK", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
 @app.route("/about")
 def about():
     try:
