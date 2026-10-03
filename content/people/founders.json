@@ -43,5 +43,14 @@
     "bio": "🇱🇰 Country: Sri Lanka\r\n🏫 School: Sivali Central College, Ratnapura\r\n🤖 Focus: AI, ML, software development, robotics & IoT\r\n🧠 IOAI 2026: Honourable Mention\r\n🌎 IOAI 2026: Sri Lanka national-team member\r\n💻 NOI 2026: National finalist\r\n🚀 Projects: HealStream, C-Effect, Aeolian Nexus\r\n🏆 Earlier activities: Robotics, invention competitions, aviation, sports",
     "portrait_url": "https://i.postimg.cc/k4Jh5Z3w/Srilanka.jpg",
     "active": true
+  },
+  {
+    "id": "aboubacar-bangour",
+    "order": 60,
+    "name": "Aboubacar Bangoura",
+    "role": "Co-Founder",
+    "bio": "🇬🇳 Country: Guinea\r\n🤖 Field: Artificial Intelligence\r\n🌍 International representation: Guinea at IOAI 2026\r\n🏆 Competition: International Olympiad in Artificial Intelligence 2026",
+    "portrait_url": "https://i.postimg.cc/43J1v9Lx/Guinea.jpg",
+    "active": true
   }
 ]
