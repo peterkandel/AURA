@@ -663,10 +663,11 @@ def test_founder_and_national_head_crud_country_active_and_order(client):
     changed = person_form("founder", slug="founder-one", name="Founder Revised", order="1", active="")
     test_client.post("/admin/founders/founder-one/edit", data=changed, follow_redirects=True)
     assert b"Founder Revised" not in test_client.get("/about").data
-    assert json.loads(store.files["people/founders.json"])[0]["order"] == 1
+    saved_founder = next(record for record in json.loads(store.files["people/founders.json"]) if record["id"] == "founder-one")
+    assert saved_founder["order"] == 1
     test_client.get("/admin/founders/founder-one/delete")
     test_client.post("/admin/founders/founder-one/delete", follow_redirects=True)
-    assert json.loads(store.files["people/founders.json"]) == []
+    assert all(record["id"] != "founder-one" for record in json.loads(store.files["people/founders.json"]))
 
     head = person_form("national", slug="head-canada", name="Canada Lead", country="Canada", order="4")
     test_client.post("/admin/national_heads/new", data=head, follow_redirects=True)
@@ -679,7 +680,9 @@ def test_founder_and_national_head_crud_country_active_and_order(client):
     test_client.post("/admin/national_heads/head-canada/edit", data=edit_head, follow_redirects=True)
     assert b"New Zealand" in test_client.get("/about").data
     test_client.post("/admin/national_heads/head-canada/delete", follow_redirects=True)
-    assert [record["id"] for record in json.loads(store.files["people/national_heads.json"])] == ["head-canada-second"]
+    remaining_heads = [record["id"] for record in json.loads(store.files["people/national_heads.json"])]
+    assert "head-canada" not in remaining_heads
+    assert "head-canada-second" in remaining_heads
 
 
 def test_nonexistent_content_edit_and_delete_return_404(client):

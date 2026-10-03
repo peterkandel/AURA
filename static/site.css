@@ -1349,10 +1349,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 /* Theme switching is instantaneous; no motion or OS preference overrides light. */
-.theme-toggle { min-height: 44px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 4px; background: var(--ivory); color: var(--ink); font: 500 14px/1.4 var(--font-body); cursor: pointer; }
+.theme-toggle { width: 44px; min-height: 44px; padding: 0; display: inline-grid; place-items: center; border: 1px solid var(--control-border); border-radius: 4px; background: var(--ivory); color: var(--ink); cursor: pointer; }
 .theme-toggle[hidden] { display: none; }
 .theme-toggle:hover { background: var(--sand); }
 .theme-toggle[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 -3px var(--accent); }
+.theme-icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.theme-icon--sun { display: none; }
+html[data-theme="dark"] .theme-icon--moon { display: none; }
+html[data-theme="dark"] .theme-icon--sun { display: block; }
 @media (max-width: 480px) {
   .topbar-inner > .brand-mark { flex-basis: 100%; }
   .theme-toggle { margin-left: auto; }
@@ -1396,3 +1400,33 @@ html[data-theme="dark"] .hero-journey { border-color: var(--control-border); box
 .newsroom-lead-image .image-note, .home-news-art:not(.home-news-art--type) .art-index, .initiative-lead-art:not(.initiative-lead-art--type) .image-note { padding: 4px 8px; background: var(--ivory); color: var(--ink); }
 
 .pathway-band a:focus-visible { outline-color: #29231f; }
+
+@media (min-width: 901px) {
+  .topbar-inner { justify-content: flex-start; flex-wrap: nowrap; gap: 20px; padding-block: 14px; }
+  .topbar-inner > .brand-mark { margin-right: auto; }
+  .brand-mark { font-size: 20px; gap: 10px; }
+  .brand-logo { width: 40px; height: 40px; flex-basis: 40px; }
+  .theme-toggle { width: 42px; min-height: 42px; flex: 0 0 42px; }
+  .main-nav { gap: 20px; }
+  .main-nav a { padding-inline: 2px; }
+  .main-nav a.is-active, .main-nav a[aria-current="page"] { box-shadow: inset 0 -1px var(--plum); }
+  .nav-cta { min-height: 44px; padding: 10px 16px; }
+}
+
+/* Mobile navigation drawer. Desktop navigation keeps its inline layout. */
+.nav-backdrop { display: none; }
+@media (max-width: 900px) {
+  body.nav-drawer-open { overflow: hidden; }
+  .topbar.nav-enhanced { z-index: 40; }
+  .mobile-menu-toggle { position: relative; z-index: 50; width: 44px; min-height: 44px; padding: 0; display: inline-grid; place-items: center; }
+  .menu-glyph { width: 22px; height: 18px; display: grid; align-content: space-between; }
+  .menu-glyph span { display: block; width: 100%; height: 2px; background: currentColor; border-radius: 2px; transition: transform .2s ease, opacity .2s ease; }
+  .nav-backdrop { position: fixed; inset: 0; z-index: 35; display: block; padding: 0; border: 0; background: rgba(25, 19, 24, .42); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s ease; }
+  .nav-backdrop.is-visible { opacity: 1; visibility: visible; }
+  .topbar.nav-enhanced .main-nav { position: fixed; z-index: 45; top: 0; right: auto; bottom: 0; left: 0; width: min(86vw, 360px); height: 100dvh; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 96px 24px 28px; overflow-y: auto; background: var(--paper); border-right: 1px solid var(--control-border); box-shadow: 18px 0 45px rgba(25, 19, 24, .18); transform: translateX(-105%); visibility: hidden; transition: transform .24s ease, visibility .24s ease; }
+  .topbar.nav-enhanced .main-nav.is-open { transform: translateX(0); visibility: visible; }
+  .topbar.nav-enhanced .main-nav a { width: 100%; min-height: 48px; justify-content: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-glyph span, .nav-backdrop, .topbar.nav-enhanced .main-nav { transition: none; }
+}

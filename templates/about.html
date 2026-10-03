@@ -9,12 +9,7 @@
   <section class="people-editorial page-wrap">
     <header class="people-section-head"><div><p class="eyebrow">{{ about_content.founders_eyebrow }}</p><h2>{{ about_content.founders_heading }}</h2></div><span class="people-count">{{ founders|length }} <small>{{ site_content.about_people_count_label }}</small></span></header>
     {% if founders %}
-      {% set lead = founders[0] %}
-      <article class="founder-lead">
-        {% if lead.portrait_url %}<div class="founder-image"><img src="{{ lead.portrait_url }}" alt="Portrait of {{ lead.name }}" loading="lazy"></div>{% else %}<div class="founder-image founder-image--empty"><img class="fallback-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024" loading="lazy"></div>{% endif %}
-        <div class="founder-profile"><p class="eyebrow">{{ lead.role }}</p><h3>{{ lead.name }}</h3><p>{{ lead.bio }}</p><span class="profile-index">FOUNDER / 01</span></div>
-      </article>
-      {% if founders|length > 1 %}<ol class="people-index-list">{% for person in founders[1:] %}<li><span class="people-index-number">{{ '%02d'|format(loop.index + 1) }}</span><div>{% if person.portrait_url %}<img class="people-index-image" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<img class="people-index-monogram small-fallback-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024" loading="lazy">{% endif %}</div><div class="people-index-copy"><p class="eyebrow">{{ person.role }}</p><h3>{{ person.name }}</h3><p>{{ person.bio }}</p></div></li>{% endfor %}</ol>{% endif %}
+      <ol class="people-index-list">{% for person in founders %}<li><span class="people-index-number">{{ '%02d'|format(loop.index) }}</span><div>{% if person.portrait_url %}<img class="people-index-image" src="{{ person.portrait_url }}" alt="Portrait of {{ person.name }}" loading="lazy">{% else %}<img class="people-index-monogram small-fallback-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024" loading="lazy">{% endif %}</div><div class="people-index-copy"><p class="eyebrow">{{ person.role }}</p><h3>{{ person.name }}</h3><p>{{ person.bio }}</p></div></li>{% endfor %}</ol>
     {% else %}<div class="editorial-empty"><span class="empty-index" aria-hidden="true">F / 01</span><p>{{ about_content.founders_empty_message }}</p></div>{% endif %}
   </section>
 

@@ -23,8 +23,11 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar"><div class="topbar-inner">
     <a href="{{ url_for('home') }}" class="brand-mark"><img class="brand-logo" src="{{ url_for('static', filename='adhayan-logo.png') }}" alt="" width="1024" height="1024"><span>{{ site_content.organization_name }}</span></a>
-    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">Menu</button>
-    <button class="theme-toggle" type="button" aria-pressed="false" hidden>Dark mode</button>
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span class="menu-glyph" aria-hidden="true"><span></span><span></span><span></span></span></button>
+    <button class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false" hidden>
+      <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 8.5 8.5 0 1 0 20.5 14.5Z"></path></svg>
+      <svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+    </button>
     <nav class="main-nav" id="primary-nav" aria-label="Main navigation">
       {% for item in site_content.navigation %}
         {% if item.page == 'about' %}<a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}is-active{% endif %}" {% if request.endpoint == 'about' %}aria-current="page"{% endif %}>{{ item.label }}</a>
@@ -34,6 +37,7 @@
     </nav>
     <a class="nav-cta" href="{{ url_for('news_index') }}">{{ site_content.nav_cta_label }}</a>
   </div></header>
+  <button class="nav-backdrop" type="button" aria-label="Close navigation" tabindex="-1"></button>
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash flash--{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
   <div id="main-content" tabindex="-1">{% block content %}{% endblock %}</div>
   <footer class="site-footer"><div class="footer-inner">
@@ -43,7 +47,11 @@
   <script>
     const themeButton = document.querySelector('.theme-toggle');
     const syncThemeButton = () => {
-      themeButton.setAttribute('aria-pressed', String(document.documentElement.dataset.theme === 'dark'));
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+      themeButton.setAttribute('aria-pressed', String(isDark));
+      themeButton.setAttribute('aria-label', label);
+      themeButton.setAttribute('title', label);
     };
     syncThemeButton();
     themeButton.hidden = false;
@@ -61,18 +69,30 @@
     });
     const menuButton = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('#primary-nav');
+    const navBackdrop = document.querySelector('.nav-backdrop');
+    const setNavigationOpen = (open, returnFocus = false) => {
+      nav.classList.toggle('is-open', open);
+      navBackdrop.classList.toggle('is-visible', open);
+      document.body.classList.toggle('nav-drawer-open', open);
+      menuButton.setAttribute('aria-expanded', String(open));
+      menuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      if (open) window.setTimeout(() => nav.querySelector('a')?.focus(), 50);
+      else if (returnFocus) menuButton.focus();
+    };
     menuButton?.closest('.topbar').classList.add('nav-enhanced');
     menuButton?.addEventListener('click', () => {
       const expanded = menuButton.getAttribute('aria-expanded') === 'true';
-      menuButton.setAttribute('aria-expanded', String(!expanded));
-      menuButton.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
-      nav.classList.toggle('is-open', !expanded);
+      setNavigationOpen(!expanded, expanded);
     });
+    navBackdrop?.addEventListener('click', () => setNavigationOpen(false, true));
+    nav?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setNavigationOpen(false)));
     nav?.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && menuButton.getAttribute('aria-expanded') === 'true') {
-        menuButton.click();
-        menuButton.focus();
+        setNavigationOpen(false, true);
       }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menuButton.getAttribute('aria-expanded') === 'true') setNavigationOpen(false, true);
     });
   </script>
 </body>
