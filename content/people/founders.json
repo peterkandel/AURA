@@ -52,5 +52,14 @@
     "bio": "🇬🇳 Country: Guinea\r\n🤖 Field: Artificial Intelligence\r\n🌍 International representation: Guinea at IOAI 2026\r\n🏆 Competition: International Olympiad in Artificial Intelligence 2026",
     "portrait_url": "https://i.postimg.cc/43J1v9Lx/Guinea.jpg",
     "active": true
+  },
+  {
+    "id": "pitambar-lamichhane",
+    "order": 10,
+    "name": "Pitambar Lamichhane",
+    "role": "Co-Founder",
+    "bio": "🇳🇵 Country: Nepal\r\n🤖 Focus: Artificial Intelligence, Machine Learning, Mathematics\r\n🏆 NOAI 2026: Rank 1 / National Champion\r\n🌎 IOAI 2026: Honourable Mention\r\n🇳🇵 National Team: Nepal, IOAI 2026\r\n🧠 Interests: Neural Networks, Optimization, AI Research\r\n💻 Projects: Transformer from scratch, algorithmic/computational projects\r\n🚀 Leadership: Co-founder of ADHAYAN\r\n📚 Research: Published research involving quantitative analysis and technology adoption",
+    "portrait_url": "https://i.postimg.cc/1z5jm2ZL/Nepal-1.jpg",
+    "active": true
   }
 ]
