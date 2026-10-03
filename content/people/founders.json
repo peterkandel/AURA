@@ -34,5 +34,14 @@
     "bio": "🇺🇦 Country: Ukraine\r\n🏫 School: Lyceum No. 19 “Mezhyhirskyi”\r\n🎓 Grade: 9th grade\r\n💻 Focus: Programming, AI, computer technology\r\n🤖 IOAI 2026: Honourable Mention\r\n📊 IOAI 2026 rank: 248th\r\n🥉 Infomatrix 2026: Bronze Medal\r\n🧑‍💻 Codeforces: Andrii_Bilan\r\n🧑‍💻 E-Olymp: andriy_bilan",
     "portrait_url": "https://i.postimg.cc/9083V2Db/Ukraine.jpg",
     "active": true
+  },
+  {
+    "id": "chanitha-sendinu",
+    "order": 50,
+    "name": "Chanitha Sendinu Denagama",
+    "role": "Co-Founder",
+    "bio": "🇱🇰 Country: Sri Lanka\r\n🏫 School: Sivali Central College, Ratnapura\r\n🤖 Focus: AI, ML, software development, robotics & IoT\r\n🧠 IOAI 2026: Honourable Mention\r\n🌎 IOAI 2026: Sri Lanka national-team member\r\n💻 NOI 2026: National finalist\r\n🚀 Projects: HealStream, C-Effect, Aeolian Nexus\r\n🏆 Earlier activities: Robotics, invention competitions, aviation, sports",
+    "portrait_url": "https://i.postimg.cc/k4Jh5Z3w/Srilanka.jpg",
+    "active": true
   }
 ]
