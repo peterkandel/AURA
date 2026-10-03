@@ -16,5 +16,14 @@
     "bio": "🇵🇰 Country: Pakistan\r\n🏫 School: Aitchison College, Lahore\r\n🤖 Field: Artificial Intelligence / computational problem-solving\r\n🌎 International competition: IOAI 2026\r\n🏅 Result: Honourable Mention\r\n📊 IOAI rank: 222nd\r\n🏛️ National team: Pakistan, 2026\r\n🧠 Training: 3-week intensive AI training camp at PIEAS",
     "portrait_url": "https://i.postimg.cc/4NW4NCDD/Pakistan.jpg",
     "active": true
+  },
+  {
+    "id": "shaidozman-araf",
+    "order": 20,
+    "name": "Shaidozzaman Araf",
+    "role": "Co-Founder",
+    "bio": "🇧🇩 Country: Bangladesh\r\n📍 Location: Mymensingh, Bangladesh\r\n🤖 Focus: AI, Machine Learning, Software Engineering\r\n🏆 APOAI 2026: Gold Medal — Rank 5\r\n🥉 IOAI 2026: Bronze Medal — Rank 161\r\n🇧🇩 IOAI: Bangladesh national-team delegate\r\n💻 BdAIO 2025: National camper; Rank 7 in national round\r\n🧑‍💻 BOI 2025: National contestant\r\n🚀 Entrepreneurship: Co-Founder/CEO/CTO, Dead Mans Tech\r\n🔬 Technical interests: ML, data science, AI engineering, web/mobile/backend development",
+    "portrait_url": "https://i.postimg.cc/MKpxLPn9/Bangladesh.jpg",
+    "active": true
   }
 ]
