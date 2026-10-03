@@ -61,5 +61,14 @@
     "bio": "🇳🇵 Country: Nepal\r\n🤖 Focus: Artificial Intelligence, Machine Learning, Mathematics\r\n🏆 NOAI 2026: Rank 1 / National Champion\r\n🌎 IOAI 2026: Honourable Mention\r\n🇳🇵 National Team: Nepal, IOAI 2026\r\n🧠 Interests: Neural Networks, Optimization, AI Research\r\n💻 Projects: Transformer from scratch, algorithmic/computational projects\r\n🚀 Leadership: Co-founder of ADHAYAN\r\n📚 Research: Published research involving quantitative analysis and technology adoption",
     "portrait_url": "https://i.postimg.cc/1z5jm2ZL/Nepal-1.jpg",
     "active": true
+  },
+  {
+    "id": "prince-kumar-mandal",
+    "order": 80,
+    "name": "Prince Kumar Mandal",
+    "role": "Co-Founder",
+    "bio": "🇳🇵 Country: Nepal\r\n🏫 Institution: St. Xavier’s College, Kathmandu\r\n🤖 Focus: Artificial Intelligence & Machine Learning\r\n🧠 Interests: Neural Networks, Classification, KNN, Image Segmentation\r\n🌏 International representation: Nepal at IOAI 2025\r\n💻 Field: Computer Science / AI research",
+    "portrait_url": "https://i.postimg.cc/g24gTs6g/Nepal-2.png",
+    "active": true
   }
 ]
