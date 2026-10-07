@@ -8,5 +8,15 @@
     "portrait_url": "https://i.postimg.cc/0jH4FC4F/india.jpg",
     "active": true,
     "country": "India"
+  },
+  {
+    "id": "ayan-zeeshan",
+    "order": 1,
+    "name": "Ayan Zeeshan",
+    "role": "Co-Founder & Pakistan National Head",
+    "bio": "Patriae et Scientiae.",
+    "portrait_url": "",
+    "active": true,
+    "country": "Pakistan"
   }
 ]
