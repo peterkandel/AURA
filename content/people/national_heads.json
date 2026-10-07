@@ -8,5 +8,15 @@
     "portrait_url": "https://i.postimg.cc/0jH4FC4F/india.jpg",
     "active": true,
     "country": "India"
+  },
+  {
+    "id": "ayan-zeeshan",
+    "order": 2,
+    "name": "Ayan Zeeshan",
+    "role": "Pakistan National Head",
+    "bio": "Scientiae et Patriae.",
+    "portrait_url": "https://adhayan.xyz",
+    "active": true,
+    "country": "Pakistan"
   }
 ]
