@@ -23,9 +23,9 @@
     "id": "peter_r_kandel",
     "order": 30,
     "name": "Peter R. Kandel",
-    "role": "N",
+    "role": "National Head",
     "bio": "🇳🇵 Based in: Kathmandu, Nepal\r\n🤖 Focus: Artificial Intelligence, Software Engineering, Mathematics\r\n🏆 Olympiads: National top 20 in Math and AI\r\n💻 Projects: NATERIDA—award-winning robotics team project; independently built flood victim tracking app\r\n📚 Research: Collaborating with a PhD professor at Tribhuvan University\r\n🧠 Interests: Computer Vision, Robotics, Accessible Technology",
-    "portrait_url": "",
+    "portrait_url": "https://i.postimg.cc/HntdkStt/peter.jpg",
     "active": true,
     "country": "Nepal"
   }
