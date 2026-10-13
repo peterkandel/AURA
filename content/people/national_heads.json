@@ -38,5 +38,15 @@
     "portrait_url": "https://i.postimg.cc/d1t9f3x3/aus.jpg",
     "active": true,
     "country": "Austrailia"
+  },
+  {
+    "id": "serena_li_",
+    "order": 40,
+    "name": "Serena Li",
+    "role": "National Head",
+    "bio": "🇦🇺 **Name:** Serena Li  \r\n🤖 **Field of Distinction:** Artificial Intelligence  \r\n🏆 **Competition:** Asia-Pacific Olympiad in Artificial Intelligence (APOAI) 2026  \r\n🌏 **Country Represented:** Australia  \r\n📅 **Competition Date:** June 13, 2026  \r\n🥇 **Final Ranking:** 102nd out of 128 contestants  \r\n📊 **Score:** 92.8797 normalized points  \r\n🎖️ **Award:** Honourable Mention (HM)",
+    "portrait_url": "https://i.postimg.cc/d1t9f3x3/aus.jpg",
+    "active": true,
+    "country": "Austrailia"
   }
 ]
